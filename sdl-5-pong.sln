@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sdl-5-pong", "sdl-5-pong\sdl-5-pong.vcxproj", "{E86A5F36-0E6B-41F7-A976-CB5CA250F779}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E86A5F36-0E6B-41F7-A976-CB5CA250F779}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E86A5F36-0E6B-41F7-A976-CB5CA250F779}.Debug|Win32.Build.0 = Debug|Win32
+		{E86A5F36-0E6B-41F7-A976-CB5CA250F779}.Release|Win32.ActiveCfg = Release|Win32
+		{E86A5F36-0E6B-41F7-A976-CB5CA250F779}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
