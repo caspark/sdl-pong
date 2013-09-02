@@ -135,6 +135,13 @@ void ball_free(BALL *ball) {
 	delete ball;
 }
 
+bool rects_overlap(VEC2 p1, VEC2 s1, VEC2 p2, VEC2 s2) {
+	return p1.x < p2.x + s2.x
+		&& p1.x + s1.x > p2.x
+		&& p1.y < p2.y + s2.y
+		&& p1.y + s2.y > p1.y;
+}
+
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
 		logSDLError(std::cout, "SDL_Init");
@@ -190,6 +197,20 @@ int main(int argc, char **argv){
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
 				quit = true;
 			}
+		}
+
+		//Movement and collision detection
+		ball->pos.x += ball->speed.x;
+		ball->pos.y += ball->speed.y;
+
+		//FIXME ball can go so fast it will move past the paddles
+		if (rects_overlap(human->pos, human->size, ball->pos, ball->size)) {
+			ball->speed.x *= -1;
+			ball->speed.x += ((ball->speed.x > 0) - (ball->speed.x < 0)) * 1;
+		}
+		if (rects_overlap(opponent->pos, opponent->size, ball->pos, ball->size)) {
+			ball->speed.x *= -1;
+			ball->speed.x += ((ball->speed.x > 0) - (ball->speed.x < 0)) * 1;
 		}
 
 		//Render our scene
