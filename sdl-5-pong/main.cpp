@@ -95,10 +95,7 @@ typedef struct {
 } BALL;
 
 PLAYER* player_load(SDL_Renderer *renderer, bool isLeft) {
-	PLAYER *player = (PLAYER*) malloc(sizeof PLAYER);
-	if (player == nullptr) {
-		return nullptr;
-	}
+	PLAYER *player = new PLAYER;
 	player->tex = loadTexture("paddle.png", renderer);
 	if (player->tex == nullptr) {
 		return nullptr;
@@ -116,14 +113,11 @@ PLAYER* player_load(SDL_Renderer *renderer, bool isLeft) {
 
 void player_free(PLAYER *player) {
 	SDL_DestroyTexture(player->tex);
-	free(player);
+	delete player;
 }
 
 BALL* ball_load(SDL_Renderer *renderer) {
-	BALL *ball = (BALL*) malloc(sizeof BALL);
-	if (ball == nullptr) {
-		return nullptr;
-	}
+	BALL *ball = new BALL;
 	ball->tex = loadTexture("ball.png", renderer);
 	if (ball->tex == nullptr) {
 		return nullptr;
@@ -131,12 +125,14 @@ BALL* ball_load(SDL_Renderer *renderer) {
 	SDL_QueryTexture(ball->tex, nullptr, nullptr, &(ball->size.x), &(ball->size.y));
 	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
 	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
+	ball->speed.x = 5;
+	ball->speed.y = 0;
 	return ball;
 }
 
 void ball_free(BALL *ball) {
 	SDL_DestroyTexture(ball->tex);
-	free(ball);
+	delete ball;
 }
 
 int main(int argc, char **argv){
