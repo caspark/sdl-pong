@@ -6,6 +6,8 @@
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 
+const int HUMAN_SPEED = 5;
+
 /**
 * Log an SDL error with some error message to the output stream of our choice,
 * then sleep for a bit.
@@ -178,25 +180,26 @@ int main(int argc, char **argv){
 		return 6;
 	}
 
-	BALL* ball = ball_load(renderer);
+	BALL *ball = ball_load(renderer);
 
 	bool quit = false;
-	SDL_Event e;
+	SDL_Event event;
 	while (!quit) {
 		//Read user input & handle it
-		while (SDL_PollEvent(&e)) {
-			//If user closes the window
-			if (e.type == SDL_QUIT) {
+		while (SDL_PollEvent(&event)) {
+			switch(event.type) {
+			case SDL_QUIT:
 				quit = true;
+				break;
 			}
-			//If user presses any key
-			if (e.type == SDL_KEYDOWN) {
-				quit = true;
-			}
-			//If user clicks the mouse
-			if (e.type == SDL_MOUSEBUTTONDOWN) {
-				quit = true;
-			}
+		}
+
+		//handle non-event-based input
+		const Uint8 *keysDown = SDL_GetKeyboardState(nullptr);
+		if (keysDown[SDL_SCANCODE_UP]) {
+			human->pos.y -= HUMAN_SPEED;
+		} else if (keysDown[SDL_SCANCODE_DOWN]) {
+			human->pos.y += HUMAN_SPEED;
 		}
 
 		//Movement and collision detection
