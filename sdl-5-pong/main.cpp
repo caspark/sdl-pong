@@ -191,6 +191,13 @@ int main(int argc, char **argv){
 			case SDL_QUIT:
 				quit = true;
 				break;
+			case SDL_KEYDOWN:
+				switch(event.key.keysym.scancode) {
+				case SDL_SCANCODE_ESCAPE:
+					quit = true;
+					break;
+				}
+				break;
 			}
 		}
 
