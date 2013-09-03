@@ -141,7 +141,7 @@ bool rects_overlap(VEC2 p1, VEC2 s1, VEC2 p2, VEC2 s2) {
 	return p1.x < p2.x + s2.x
 		&& p1.x + s1.x > p2.x
 		&& p1.y < p2.y + s2.y
-		&& p1.y + s2.y > p1.y;
+		&& p1.y + s1.y > p2.y;
 }
 
 int main(int argc, char **argv){
