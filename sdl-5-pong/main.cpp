@@ -10,8 +10,8 @@ const int SCREEN_HEIGHT = 480;
 
 const int PLAYER_SPEED = 5;
 const int INITIAL_BALL_X_SPEED = 5;
-const int INITIAL_BALL_Y_SPEED_MIN = 1;
-const int INITIAL_BALL_Y_SPEED_MAX = 4;
+const int INITIAL_BALL_Y_SPEED_MIN = 2;
+const int INITIAL_BALL_Y_SPEED_MAX = 5;
 
 /**
 * Log an SDL error with some error message to the output stream of our choice,
@@ -123,6 +123,14 @@ void player_free(PLAYER *player) {
 	delete player;
 }
 
+void ball_reset(BALL *ball) {
+	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
+	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
+	ball->speed.x = INITIAL_BALL_X_SPEED;
+	ball->speed.y = (rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
+		- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN;
+}
+
 BALL* ball_load(SDL_Renderer *renderer) {
 	BALL *ball = new BALL;
 	ball->tex = loadTexture("ball.png", renderer);
@@ -130,11 +138,7 @@ BALL* ball_load(SDL_Renderer *renderer) {
 		return nullptr;
 	}
 	SDL_QueryTexture(ball->tex, nullptr, nullptr, &(ball->size.x), &(ball->size.y));
-	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
-	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
-	ball->speed.x = INITIAL_BALL_X_SPEED;
-	ball->speed.y = (rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
-		- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN;
+	ball_reset(ball);
 	return ball;
 }
 
@@ -163,8 +167,8 @@ VEC2 getCenter(BALL *ball) {
 	return getCenter(ball->pos, ball->size);
 }
 
-int main(int argc, char **argv){
-	srand(time(NULL)); //seed random number generator with the current time
+int main(int argc, char **argv) {
+	srand((unsigned int) time(NULL)); //seed random number generator with the current time
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
 		logSDLError(std::cout, "SDL_Init");
@@ -256,6 +260,14 @@ int main(int argc, char **argv){
 
 		if (ball->pos.y < 0 || ball->pos.y + ball->size.y > SCREEN_HEIGHT) {
 			ball->speed.y *= -1;
+		}
+
+		if (ball->pos.x < 0) {
+			std::cout << "AI player wins round!" << std::endl;
+			ball_reset(ball);
+		} else if (ball->pos.x + ball->size.x > SCREEN_WIDTH) {
+			std::cout << "Human player wins round!" << std::endl;
+			ball_reset(ball);
 		}
 
 		//Render our scene
