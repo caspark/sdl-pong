@@ -1,12 +1,17 @@
 #include <string>
 #include <iostream>
+#include <time.h>
+#include <stdlib.h>
 #include <SDL.h>
 #include <SDL_image.h>
 
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 
-const int HUMAN_SPEED = 5;
+const int PLAYER_SPEED = 5;
+const int INITIAL_BALL_X_SPEED = 5;
+const int INITIAL_BALL_Y_SPEED_MIN = 1;
+const int INITIAL_BALL_Y_SPEED_MAX = 4;
 
 /**
 * Log an SDL error with some error message to the output stream of our choice,
@@ -127,8 +132,9 @@ BALL* ball_load(SDL_Renderer *renderer) {
 	SDL_QueryTexture(ball->tex, nullptr, nullptr, &(ball->size.x), &(ball->size.y));
 	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
 	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
-	ball->speed.x = 5;
-	ball->speed.y = 0;
+	ball->speed.x = INITIAL_BALL_X_SPEED;
+	ball->speed.y = (rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
+		- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN;
 	return ball;
 }
 
@@ -144,7 +150,22 @@ bool rects_overlap(VEC2 p1, VEC2 s1, VEC2 p2, VEC2 s2) {
 		&& p1.y + s1.y > p2.y;
 }
 
+VEC2 getCenter(VEC2 pos, VEC2 size) {
+	VEC2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
+	return center;
+}
+
+VEC2 getCenter(PLAYER *player) {
+	return getCenter(player->pos, player->size);
+}
+
+VEC2 getCenter(BALL *ball) {
+	return getCenter(ball->pos, ball->size);
+}
+
 int main(int argc, char **argv){
+	srand(time(NULL)); //seed random number generator with the current time
+
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
 		logSDLError(std::cout, "SDL_Init");
 		return 1;
@@ -204,10 +225,20 @@ int main(int argc, char **argv){
 		//handle non-event-based input
 		const Uint8 *keysDown = SDL_GetKeyboardState(nullptr);
 		if (keysDown[SDL_SCANCODE_UP]) {
-			human->pos.y -= HUMAN_SPEED;
+			human->pos.y -= PLAYER_SPEED;
 		} else if (keysDown[SDL_SCANCODE_DOWN]) {
-			human->pos.y += HUMAN_SPEED;
+			human->pos.y += PLAYER_SPEED;
 		}
+
+		//move opponent player
+		int targetYPos = getCenter(ball).y;
+		int targetSpeed = targetYPos - getCenter(opponent).y;
+		if (targetSpeed > PLAYER_SPEED) {
+			targetSpeed = PLAYER_SPEED;
+		} else if (targetSpeed < -PLAYER_SPEED) {
+			targetSpeed = -PLAYER_SPEED;
+		}
+		opponent->pos.y += targetSpeed;
 
 		//Movement and collision detection
 		ball->pos.x += ball->speed.x;
@@ -221,6 +252,10 @@ int main(int argc, char **argv){
 		if (rects_overlap(opponent->pos, opponent->size, ball->pos, ball->size)) {
 			ball->speed.x *= -1;
 			ball->speed.x += ((ball->speed.x > 0) - (ball->speed.x < 0)) * 1;
+		}
+
+		if (ball->pos.y < 0 || ball->pos.y + ball->size.y > SCREEN_HEIGHT) {
+			ball->speed.y *= -1;
 		}
 
 		//Render our scene
