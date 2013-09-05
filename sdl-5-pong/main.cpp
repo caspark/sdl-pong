@@ -101,6 +101,11 @@ typedef struct {
 	SDL_Texture *tex;
 } BALL;
 
+typedef struct {
+	int human;
+	int opponent;
+} SCORE;
+
 PLAYER* player_load(SDL_Renderer *renderer, bool isLeft) {
 	PLAYER *player = new PLAYER;
 	player->tex = loadTexture("paddle.png", renderer);
@@ -207,6 +212,8 @@ int main(int argc, char **argv) {
 
 	BALL *ball = ball_load(renderer);
 
+	SCORE score = {0, 0};
+
 	bool quit = false;
 	SDL_Event event;
 	while (!quit) {
@@ -263,10 +270,14 @@ int main(int argc, char **argv) {
 		}
 
 		if (ball->pos.x < 0) {
-			std::cout << "AI player wins round!" << std::endl;
+			score.opponent++;
+			std::cout << "AI player wins round! Score: " << score.human 
+				<< " | " << score.opponent	<< std::endl;
 			ball_reset(ball);
 		} else if (ball->pos.x + ball->size.x > SCREEN_WIDTH) {
-			std::cout << "Human player wins round!" << std::endl;
+			score.human++;
+			std::cout << "Human player wins round!" << score.human 
+				<< " | " << score.opponent	<< std::endl;
 			ball_reset(ball);
 		}
 
