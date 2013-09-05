@@ -110,13 +110,6 @@ PLAYER* player_load(SDL_Renderer *renderer, bool isLeft) {
 		return nullptr;
 	}
 	SDL_QueryTexture(player->tex, nullptr, nullptr, &(player->size.x), &(player->size.y));
-	if (isLeft) {
-		player->pos.x = 0;
-		player->pos.y = SCREEN_HEIGHT / 2 - player->size.y / 2;
-	} else {
-		player->pos.x = SCREEN_WIDTH - player->size.x;
-		player->pos.y = SCREEN_HEIGHT / 2 - player->size.y / 2;
-	}
 	return player;
 }
 
@@ -125,7 +118,11 @@ void player_free(PLAYER *player) {
 	delete player;
 }
 
-void ball_reset(BALL *ball) {
+void start_round(PLAYER *player1, PLAYER *player2, BALL *ball) {
+	player1->pos.x = 0;
+	player1->pos.y = SCREEN_HEIGHT / 2 - player1->size.y / 2;
+	player2->pos.x = SCREEN_WIDTH - player2->size.x;
+	player2->pos.y = SCREEN_HEIGHT / 2 - player2->size.y / 2;
 	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
 	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
 	ball->speed.x = INITIAL_BALL_X_SPEED;
@@ -140,7 +137,6 @@ BALL* ball_load(SDL_Renderer *renderer) {
 		return nullptr;
 	}
 	SDL_QueryTexture(ball->tex, nullptr, nullptr, &(ball->size.x), &(ball->size.y));
-	ball_reset(ball);
 	return ball;
 }
 
@@ -236,6 +232,7 @@ int main(int argc, char **argv) {
 	BALL *ball = ball_load(renderer);
 
 	SCORE score = {0, 0};
+	start_round(human, opponent, ball);
 
 	bool quit = false;
 	SDL_Event event;
@@ -296,12 +293,12 @@ int main(int argc, char **argv) {
 			score.opponent++;
 			std::cout << "AI player wins round! Score: " << score.human 
 				<< " | " << score.opponent	<< std::endl;
-			ball_reset(ball);
+			start_round(human, opponent, ball);
 		} else if (ball->pos.x + ball->size.x > SCREEN_WIDTH) {
 			score.human++;
 			std::cout << "Human player wins round!" << score.human 
 				<< " | " << score.opponent	<< std::endl;
-			ball_reset(ball);
+			start_round(human, opponent, ball);
 		}
 
 		//Render our scene
