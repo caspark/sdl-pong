@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
@@ -24,12 +25,6 @@ void logSDLError(std::ostream &stream, const std::string &msg) {
 	SDL_Delay(2000);
 }
 
-/**
-* Log an SDL error with some error message to the output stream of our choice,
-* then sleep for a bit.
-* @param os The output stream to write the message too
-* @param msg The error message to write, format will be msg error: SDL_GetError()
-*/
 void logFatal(std::ostream &stream, const std::string &msg) {
 	stream << "Fatal: " << msg << std::endl;
 	SDL_Delay(2000);
@@ -41,7 +36,7 @@ void logFatal(std::ostream &stream, const std::string &msg) {
 * @param ren The renderer to load the texture onto
 * @return the loaded texture, or nullptr if something went wrong.
 */
-SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
+SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren) {
 	SDL_Texture *texture = IMG_LoadTexture(ren, file.c_str());
 	if (texture == nullptr) {
 		logSDLError(std::cout, "IMG_LoadTexture");
@@ -59,14 +54,16 @@ SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
 * @param w The width of the texture to draw
 * @param h The height of the texture to draw
 */
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int h){
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int h) {
 	//Setup the destination rectangle to be at the position we want
 	SDL_Rect dst;
 	dst.x = x;
 	dst.y = y;
 	dst.w = w;
 	dst.h = h;
-	SDL_RenderCopy(ren, tex, NULL, &dst);
+	if (SDL_RenderCopy(ren, tex, NULL, &dst) != 0) {
+		logSDLError(std::cout, "SDL_RenderCopy()");
+	}
 }
 
 /**
@@ -77,31 +74,31 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int
 * @param x The x coordinate to draw too
 * @param y The y coordinate to draw too
 */
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y) {
 	int w, h;
 	SDL_QueryTexture(tex, NULL, NULL, &w, &h);
 	renderTexture(tex, ren, x, y, w, h);
 }
 
-typedef struct {
+typedef struct vec2_struct {
 	int x;
 	int y;
 } VEC2;
 
-typedef struct {
+typedef struct player_struct {
 	VEC2 pos;
 	VEC2 size;
 	SDL_Texture *tex;
 } PLAYER;
 
-typedef struct {
+typedef struct ball_struct {
 	VEC2 pos;
 	VEC2 speed;
 	VEC2 size;
 	SDL_Texture *tex;
 } BALL;
 
-typedef struct {
+typedef struct score_struct {
 	int human;
 	int opponent;
 } SCORE;
@@ -172,17 +169,43 @@ VEC2 getCenter(BALL *ball) {
 	return getCenter(ball->pos, ball->size);
 }
 
+void renderText(char *text, TTF_Font *font, SDL_Renderer *renderer, int x, int y, SDL_Color color) {
+	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
+	if (textSurface == nullptr) {
+		logSDLError(std::cout, "TTF_RenderText_Blended()");
+	} else {
+		SDL_Texture *textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+		SDL_FreeSurface(textSurface);
+		if (textTexture == nullptr) {
+			logSDLError(std::cout, "SDL_CreateTextureFromSurface() for font surface");
+		}
+		renderTexture(textTexture, renderer, x, y);
+		SDL_DestroyTexture(textTexture);
+	}
+}
+
 int main(int argc, char **argv) {
 	srand((unsigned int) time(NULL)); //seed random number generator with the current time
 
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		logSDLError(std::cout, "SDL_Init");
 		return 1;
 	}
 
-	if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) != IMG_INIT_PNG){
+	if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) != IMG_INIT_PNG) {
 		logSDLError(std::cout, "IMG_Init");
 		return 1;
+	}
+
+	if (TTF_Init() == -1) {
+		logSDLError(std::cout, "TTF_Init");
+		return 1;
+	}
+
+	TTF_Font *vera = TTF_OpenFont("Vera.ttf", 24);
+	if (vera == nullptr) {
+		logSDLError(std::cout, "TTF_OpenFont");
+		return 2;
 	}
 
 	SDL_Window *window = SDL_CreateWindow("Pong", 600, 600, SCREEN_WIDTH, SCREEN_HEIGHT,
@@ -288,6 +311,9 @@ int main(int argc, char **argv) {
 		renderTexture(opponent->tex, renderer, opponent->pos.x, opponent->pos.y);
 		renderTexture(ball->tex, renderer, ball->pos.x, ball->pos.y);
 
+		SDL_Color color = {255, 0, 0};
+		renderText("Pong - nuff said.", vera, renderer, 0, 0, color);
+
 		SDL_RenderPresent(renderer);
 	}
 
@@ -297,9 +323,11 @@ int main(int argc, char **argv) {
 	player_free(human);
 	player_free(opponent);
 	ball_free(ball);
+	TTF_CloseFont(vera);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 
+	TTF_Quit();
 	IMG_Quit();
 	SDL_Quit();
 
