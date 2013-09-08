@@ -17,7 +17,7 @@ const int INITIAL_BALL_Y_SPEED_MAX = 5;
 /**
 * Log an SDL error with some error message to the output stream of our choice,
 * then sleep for a bit.
-* @param os The output stream to write the message too
+* @param os The output stream to write the message to
 * @param msg The error message to write, format will be msg error: SDL_GetError()
 */
 void logSDLError(std::ostream &stream, const std::string &msg) {
@@ -48,9 +48,9 @@ SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren) {
 * Draw an SDL_Texture to an SDL_Renderer at position x, y, with some desired
 * width and height
 * @param tex The source texture we want to draw
-* @param rend The renderer we want to draw too
-* @param x The x coordinate to draw too
-* @param y The y coordinate to draw too
+* @param rend The renderer we want to draw to
+* @param x The x coordinate to draw to
+* @param y The y coordinate to draw to
 * @param w The width of the texture to draw
 * @param h The height of the texture to draw
 */
@@ -70,9 +70,9 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int
 * Draw an SDL_Texture to an SDL_Renderer at position x, y, preserving
 * the texture's width and height
 * @param tex The source texture we want to draw
-* @param rend The renderer we want to draw too
-* @param x The x coordinate to draw too
-* @param y The y coordinate to draw too
+* @param rend The renderer we want to draw to
+* @param x The x coordinate to draw to
+* @param y The y coordinate to draw to
 */
 void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y) {
 	int w, h;
