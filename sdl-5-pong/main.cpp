@@ -81,7 +81,7 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int
 	dst.y = y;
 	dst.w = w;
 	dst.h = h;
-	if (SDL_RenderCopy(ren, tex, NULL, &dst) != 0) {
+	if (SDL_RenderCopy(ren, tex, nullptr, &dst) != 0) {
 		logSDLError("SDL_RenderCopy()");
 	}
 }
@@ -96,7 +96,7 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int
 */
 void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y) {
 	int w, h;
-	SDL_QueryTexture(tex, NULL, NULL, &w, &h);
+	SDL_QueryTexture(tex, nullptr, nullptr, &w, &h);
 	renderTexture(tex, ren, x, y, w, h);
 }
 
@@ -114,7 +114,7 @@ void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSu
 	}
 
 	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
-	if (SDL_BlitSurface(textSurface, NULL, ontoSurface, &position) != 0) {
+	if (SDL_BlitSurface(textSurface, nullptr, ontoSurface, &position) != 0) {
 		logSDLError("BlitSurface");
 	}
 	SDL_FreeSurface(textSurface);
@@ -275,7 +275,7 @@ VEC2 getCenter(BALL *ball) {
 }
 
 int main(int argc, char **argv) {
-	srand((unsigned int) time(NULL)); //seed random number generator with the current time
+	srand((unsigned int) time(nullptr)); //seed random number generator with the current time
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		logSDLError("SDL_Init");
@@ -395,7 +395,7 @@ int main(int argc, char **argv) {
 		SDL_RenderPresent(renderer);
 	}
 
-	std::cout << "All done, exiting" << std::endl;
+	std::cout << "Quitting" << std::endl;
 
 	//cleanup
 	player_free(human);
