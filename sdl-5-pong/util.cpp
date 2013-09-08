@@ -3,6 +3,19 @@
 
 #include "util.h"
 
+//adapted from SDL_assert.c
+#ifdef __WIN32__
+#include <windows.h> //Changed: including windows.h directly instead of SDL_windows.h
+
+#ifndef WS_OVERLAPPEDWINDOW
+#define WS_OVERLAPPEDWINDOW 0
+#endif
+#else  /* fprintf, _exit(), etc. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
 void handleFatal(int exitcode) {
 	std::cerr << "Fatal error encountered; waiting then quitting" << std::endl;
 	SDL_Delay(3000);

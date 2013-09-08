@@ -2,19 +2,6 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
-//adapted from SDL_assert.c
-#ifdef __WIN32__
-#include <windows.h> //Changed: including windows.h directly instead of SDL_windows.h
-
-#ifndef WS_OVERLAPPEDWINDOW
-#define WS_OVERLAPPEDWINDOW 0
-#endif
-#else  /* fprintf, _exit(), etc. */
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#endif
-
 void handleFatal(int exitcode);
 
 void logSDLError(const std::string &sdlFunctionName);
