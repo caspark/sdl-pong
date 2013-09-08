@@ -80,6 +80,26 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y) {
 	renderTexture(tex, ren, x, y, w, h);
 }
 
+/**
+* @param color - the color to render the text (alpha component is ignored and always set to 255)
+*/
+void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y) {
+	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
+	if (textSurface == nullptr) {
+		logSDLError(std::cout, "TTF_RenderText_Blended");
+	}
+	//set blend mode to none because we want this surface's alpha to override ontoSurface's alpha (not blend with it)
+	if (SDL_SetSurfaceBlendMode(textSurface, SDL_BLENDMODE_NONE) != 0) {
+		logSDLError(std::cout, "SetSurfaceBlendMode");
+	}
+
+	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
+	if (SDL_BlitSurface(textSurface, NULL, ontoSurface, &position) != 0) {
+		logSDLError(std::cout, "BlitSurface");
+	}
+	SDL_FreeSurface(textSurface);
+}
+
 typedef struct vec2_struct {
 	int x;
 	int y;
@@ -104,13 +124,42 @@ typedef struct score_struct {
 } SCORE;
 
 typedef struct hud_struct {
-	bool textureRequiresUpdate;
+	TTF_Font *font;
 	SDL_Surface *surface;
 	SDL_Texture *texture;
 } Hud;
 
+void hud_update(Hud *hud) {
+	SDL_FillRect(hud->surface, nullptr, 0);
+
+	//update the hud with new details
+	SDL_Color color = { 255, 0, 0 };
+	renderText("Pong - nuff said.", hud->font, color, hud->surface, 0, 0);
+	
+	//refresh the texture
+	bool requiresLocking = SDL_MUSTLOCK(hud->surface) != 0;
+
+	if (requiresLocking) {
+		if (SDL_LockSurface(hud->surface) != 0) {
+			logSDLError(std::cout, "SDL_LockSurface()");
+		}
+	}
+
+	SDL_Rect hudSurfaceRect = { 0, 0, hud->surface->w, hud->surface->h };
+	SDL_UpdateTexture(hud->texture, &hudSurfaceRect, hud->surface->pixels, hud->surface->pitch);
+
+	if (requiresLocking) {
+		SDL_UnlockSurface(hud->surface);
+	}
+}
+
 Hud *hud_load(SDL_Renderer *renderer) {
 	Hud *hud = new Hud;
+
+	hud->font = TTF_OpenFont("Vera.ttf", 24);
+	if (hud->font == nullptr) {
+		logSDLError(std::cout, "TTF_OpenFont");
+	}
 	
 	hud->surface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
 		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
@@ -127,36 +176,19 @@ Hud *hud_load(SDL_Renderer *renderer) {
 		logSDLError(std::cout, "SDL_SetTextureBlendMode");
 	}
 
-	hud->textureRequiresUpdate = false;
+	hud_update(hud);
 
 	return hud;
 }
 
 void hud_render(Hud *hud, SDL_Renderer *renderer) {
-	if (hud->textureRequiresUpdate) {
-		bool requiresLocking = SDL_MUSTLOCK(hud->surface) != 0;
-
-		if (requiresLocking) {
-			if (SDL_LockSurface(hud->surface) != 0) {
-				logSDLError(std::cout, "SDL_LockSurface()");
-			}
-		}
-
-		SDL_Rect hudSurfaceRect = { 0, 0, hud->surface->w, hud->surface->h };
-		SDL_UpdateTexture(hud->texture, &hudSurfaceRect, hud->surface->pixels, hud->surface->pitch);
-
-		if (requiresLocking) {
-			SDL_UnlockSurface(hud->surface);
-		}
-
-		hud->textureRequiresUpdate = false;
-	}
 	renderTexture(hud->texture, renderer, 0, 0);
 }
 
 void hud_free(Hud *hud) {
 	SDL_FreeSurface(hud->surface);
 	SDL_DestroyTexture(hud->texture);
+	TTF_CloseFont(hud->font);
 	delete hud;
 }
 
@@ -222,28 +254,6 @@ VEC2 getCenter(BALL *ball) {
 	return getCenter(ball->pos, ball->size);
 }
 
-/**
-* @param color - the color to render the text (alpha component is ignored and always set to 255)
-*/
-void renderText(char *text, TTF_Font *font, SDL_Color color, Hud *hud, int x, int y) {
-	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
-	if (textSurface == nullptr) {
-		logSDLError(std::cout, "TTF_RenderText_Blended");
-	}
-	//set blend mode to none because we want this surface's alpha to override ontoSurface's alpha (not blend with it)
-	if (SDL_SetSurfaceBlendMode(textSurface, SDL_BLENDMODE_NONE) != 0) {
-		logSDLError(std::cout, "SetSurfaceBlendMode");
-	}
-
-	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
-	if (SDL_BlitSurface(textSurface, NULL, hud->surface, &position) != 0) {
-		logSDLError(std::cout, "BlitSurface");
-	}
-	SDL_FreeSurface(textSurface);
-
-	hud->textureRequiresUpdate = true;
-}
-
 int main(int argc, char **argv) {
 	srand((unsigned int) time(NULL)); //seed random number generator with the current time
 
@@ -262,12 +272,6 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	TTF_Font *vera = TTF_OpenFont("Vera.ttf", 24);
-	if (vera == nullptr) {
-		logSDLError(std::cout, "TTF_OpenFont");
-		return 2;
-	}
-
 	SDL_Window *window = SDL_CreateWindow("Pong", 600, 600, SCREEN_WIDTH, SCREEN_HEIGHT,
 		SDL_WINDOW_SHOWN);
 	if (window == nullptr) {
@@ -281,9 +285,6 @@ int main(int argc, char **argv) {
 	}
 
 	Hud *hud = hud_load(renderer);
-
-	SDL_Color color = { 255, 0, 0 };
-	renderText("Pong - nuff said.", vera, color, hud, 0, 0);
 
 	PLAYER *human = player_load(renderer, true);
 	if (human == nullptr) {
@@ -388,7 +389,6 @@ int main(int argc, char **argv) {
 	player_free(opponent);
 	ball_free(ball);
 	hud_free(hud);
-	TTF_CloseFont(vera);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 
