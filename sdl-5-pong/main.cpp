@@ -103,6 +103,63 @@ typedef struct score_struct {
 	int opponent;
 } SCORE;
 
+typedef struct hud_struct {
+	bool textureRequiresUpdate;
+	SDL_Surface *surface;
+	SDL_Texture *texture;
+} Hud;
+
+Hud *hud_load(SDL_Renderer *renderer) {
+	Hud *hud = new Hud;
+	
+	hud->surface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
+		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+	if (hud->surface == nullptr) {
+		logSDLError(std::cout, "SDL_CreateRGBSurface");
+	}
+
+	hud->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+	if (hud->texture == nullptr) {
+		logSDLError(std::cout, "SDL_CreateTexture");
+	}
+	if (SDL_SetTextureBlendMode(hud->texture, SDL_BLENDMODE_BLEND) != 0) {
+		logSDLError(std::cout, "SDL_SetTextureBlendMode");
+	}
+
+	hud->textureRequiresUpdate = false;
+
+	return hud;
+}
+
+void hud_render(Hud *hud, SDL_Renderer *renderer) {
+	if (hud->textureRequiresUpdate) {
+		bool requiresLocking = SDL_MUSTLOCK(hud->surface) != 0;
+
+		if (requiresLocking) {
+			if (SDL_LockSurface(hud->surface) != 0) {
+				logSDLError(std::cout, "SDL_LockSurface()");
+			}
+		}
+
+		SDL_Rect hudSurfaceRect = { 0, 0, hud->surface->w, hud->surface->h };
+		SDL_UpdateTexture(hud->texture, &hudSurfaceRect, hud->surface->pixels, hud->surface->pitch);
+
+		if (requiresLocking) {
+			SDL_UnlockSurface(hud->surface);
+		}
+
+		hud->textureRequiresUpdate = false;
+	}
+	renderTexture(hud->texture, renderer, 0, 0);
+}
+
+void hud_free(Hud *hud) {
+	SDL_FreeSurface(hud->surface);
+	SDL_DestroyTexture(hud->texture);
+	delete hud;
+}
+
 PLAYER* player_load(SDL_Renderer *renderer, bool isLeft) {
 	PLAYER *player = new PLAYER;
 	player->tex = loadTexture("paddle.png", renderer);
@@ -168,7 +225,7 @@ VEC2 getCenter(BALL *ball) {
 /**
 * @param color - the color to render the text (alpha component is ignored and always set to 255)
 */
-void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y) {
+void renderText(char *text, TTF_Font *font, SDL_Color color, Hud *hud, int x, int y) {
 	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
 	if (textSurface == nullptr) {
 		logSDLError(std::cout, "TTF_RenderText_Blended");
@@ -179,10 +236,12 @@ void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSu
 	}
 
 	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
-	if (SDL_BlitSurface(textSurface, NULL, ontoSurface, &position) != 0) {
+	if (SDL_BlitSurface(textSurface, NULL, hud->surface, &position) != 0) {
 		logSDLError(std::cout, "BlitSurface");
 	}
 	SDL_FreeSurface(textSurface);
+
+	hud->textureRequiresUpdate = true;
 }
 
 int main(int argc, char **argv) {
@@ -220,29 +279,11 @@ int main(int argc, char **argv) {
 		logSDLError(std::cout, "CreateRenderer");
 		return 3;
 	}
-	if (SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND) != 0) {
-		logSDLError(std::cout, "SetRenderDrawBlendMode");
-	}
 
-	SDL_Surface *hudSurface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
-		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	if (hudSurface == nullptr) {
-		logSDLError(std::cout, "SDL_CreateRGBSurface");
-	}
-
-	SDL_Texture *hudTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	if (hudTexture == nullptr) {
-		logSDLError(std::cout, "SDL_CreateTexture");
-	}
-	if (SDL_SetTextureBlendMode(hudTexture, SDL_BLENDMODE_BLEND) != 0) {
-		logSDLError(std::cout, "SDL_SetTextureBlendMode");
-	}
+	Hud *hud = hud_load(renderer);
 
 	SDL_Color color = { 255, 0, 0 };
-	renderText("Pong - nuff said.", vera, color, hudSurface, 0, 0);
-
-	bool hudRequiresUpdate = true;
+	renderText("Pong - nuff said.", vera, color, hud, 0, 0);
 
 	PLAYER *human = player_load(renderer, true);
 	if (human == nullptr) {
@@ -328,34 +369,14 @@ int main(int argc, char **argv) {
 			start_round(human, opponent, ball);
 		}
 
-		//Update the hud
-		if (hudRequiresUpdate) {
-			bool requiresLocking = SDL_MUSTLOCK(hudSurface) != 0;
-
-			if (requiresLocking) {
-				if (SDL_LockSurface(hudSurface) != 0) {
-					logSDLError(std::cout, "SDL_LockSurface()");
-				}
-			}
-
-			SDL_Rect hudSurfaceRect = { 0, 0, hudSurface->w, hudSurface->h };
-			SDL_UpdateTexture(hudTexture, &hudSurfaceRect, hudSurface->pixels, hudSurface->pitch);
-
-			if (requiresLocking) {
-				SDL_UnlockSurface(hudSurface);
-			}
-
-			hudRequiresUpdate = false;
-		}
-
 		//Render our scene
 		SDL_RenderClear(renderer);
 
 		renderTexture(human->tex, renderer, human->pos.x, human->pos.y);
 		renderTexture(opponent->tex, renderer, opponent->pos.x, opponent->pos.y);
 		renderTexture(ball->tex, renderer, ball->pos.x, ball->pos.y);
-
-		renderTexture(hudTexture, renderer, 0, 0);
+		
+		hud_render(hud, renderer);
 
 		SDL_RenderPresent(renderer);
 	}
@@ -366,8 +387,7 @@ int main(int argc, char **argv) {
 	player_free(human);
 	player_free(opponent);
 	ball_free(ball);
-	SDL_FreeSurface(hudSurface);
-	SDL_DestroyTexture(hudTexture);
+	hud_free(hud);
 	TTF_CloseFont(vera);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
