@@ -165,13 +165,23 @@ VEC2 getCenter(BALL *ball) {
 	return getCenter(ball->pos, ball->size);
 }
 
+/**
+* @param color - the color to render the text (alpha component is ignored and always set to 255)
+*/
 void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y) {
 	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
 	if (textSurface == nullptr) {
-		logSDLError(std::cout, "TTF_RenderText_Blended()");
+		logSDLError(std::cout, "TTF_RenderText_Blended");
 	}
-	SDL_Rect position = { x, y, textSurface->w, textSurface->h };
-	SDL_BlitSurface(textSurface, NULL, ontoSurface, &position);
+	//set blend mode to none because we want this surface's alpha to override ontoSurface's alpha (not blend with it)
+	if (SDL_SetSurfaceBlendMode(textSurface, SDL_BLENDMODE_NONE) != 0) {
+		logSDLError(std::cout, "SetSurfaceBlendMode");
+	}
+
+	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
+	if (SDL_BlitSurface(textSurface, NULL, ontoSurface, &position) != 0) {
+		logSDLError(std::cout, "BlitSurface");
+	}
 	SDL_FreeSurface(textSurface);
 }
 
@@ -205,18 +215,17 @@ int main(int argc, char **argv) {
 		logSDLError(std::cout, "CreateWindow");
 		return 2;
 	}
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
-		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (renderer == nullptr) {
 		logSDLError(std::cout, "CreateRenderer");
 		return 3;
-	}	
+	}
+	if (SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND) != 0) {
+		logSDLError(std::cout, "SetRenderDrawBlendMode");
+	}
 
 	SDL_Surface *hudSurface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
-                                    0x00FF0000,
-                                    0x0000FF00,
-                                    0x000000FF,
-                                    0xFF000000);
+		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 	if (hudSurface == nullptr) {
 		logSDLError(std::cout, "SDL_CreateRGBSurface");
 	}
@@ -226,8 +235,11 @@ int main(int argc, char **argv) {
 	if (hudTexture == nullptr) {
 		logSDLError(std::cout, "SDL_CreateTexture");
 	}
-	
-	SDL_Color color = {255, 0, 0};
+	if (SDL_SetTextureBlendMode(hudTexture, SDL_BLENDMODE_BLEND) != 0) {
+		logSDLError(std::cout, "SDL_SetTextureBlendMode");
+	}
+
+	SDL_Color color = { 255, 0, 0 };
 	renderText("Pong - nuff said.", vera, color, hudSurface, 0, 0);
 
 	bool hudRequiresUpdate = true;
@@ -326,7 +338,8 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			SDL_UpdateTexture(hudTexture, NULL, hudSurface->pixels, hudSurface->pitch);
+			SDL_Rect hudSurfaceRect = { 0, 0, hudSurface->w, hudSurface->h };
+			SDL_UpdateTexture(hudTexture, &hudSurfaceRect, hudSurface->pixels, hudSurface->pitch);
 
 			if (requiresLocking) {
 				SDL_UnlockSurface(hudSurface);
@@ -338,11 +351,11 @@ int main(int argc, char **argv) {
 		//Render our scene
 		SDL_RenderClear(renderer);
 
-		renderTexture(hudTexture, renderer, 0, 0);
-
 		renderTexture(human->tex, renderer, human->pos.x, human->pos.y);
 		renderTexture(opponent->tex, renderer, opponent->pos.x, opponent->pos.y);
 		renderTexture(ball->tex, renderer, ball->pos.x, ball->pos.y);
+
+		renderTexture(hudTexture, renderer, 0, 0);
 
 		SDL_RenderPresent(renderer);
 	}
