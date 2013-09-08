@@ -6,6 +6,19 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
+//adapted from SDL_assert.c
+#ifdef __WIN32__
+#include <windows.h> //Changed: including windows.h directly instead of SDL_windows.h
+
+#ifndef WS_OVERLAPPEDWINDOW
+#define WS_OVERLAPPEDWINDOW 0
+#endif
+#else  /* fprintf, _exit(), etc. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 
@@ -14,20 +27,27 @@ const int INITIAL_BALL_X_SPEED = 5;
 const int INITIAL_BALL_Y_SPEED_MIN = 2;
 const int INITIAL_BALL_Y_SPEED_MAX = 5;
 
-/**
-* Log an SDL error with some error message to the output stream of our choice,
-* then sleep for a bit.
-* @param os The output stream to write the message to
-* @param msg The error message to write, format will be msg error: SDL_GetError()
-*/
-void logSDLError(std::ostream &stream, const std::string &msg) {
-	stream << "Error: " << msg << ": " << SDL_GetError() << std::endl;
-	SDL_Delay(2000);
+void handleFatal(int exitcode) {
+	std::cerr << "Fatal error encountered; waiting then quitting" << std::endl;
+	SDL_Delay(3000);
+	SDL_Quit();
+
+//stolen from SDL_assert.c
+#ifdef __WIN32__
+    ExitProcess(exitcode);
+#else
+    _exit(exitcode);
+#endif
 }
 
-void logFatal(std::ostream &stream, const std::string &msg) {
-	stream << "Fatal: " << msg << std::endl;
-	SDL_Delay(2000);
+void logSDLError(const std::string &sdlFunctionName) {
+	std::cerr << "SDL Error: " << sdlFunctionName << ": " << SDL_GetError() << std::endl;
+	handleFatal(541); // 541 is sort of close to SDL
+}
+
+void logFatal(const std::string &msg) {
+	std::cerr << "Fatal: " << msg << std::endl;
+	handleFatal(4532); // 4532 is as closer to USER as we're going to get
 }
 
 /**
@@ -39,7 +59,7 @@ void logFatal(std::ostream &stream, const std::string &msg) {
 SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren) {
 	SDL_Texture *texture = IMG_LoadTexture(ren, file.c_str());
 	if (texture == nullptr) {
-		logSDLError(std::cout, "IMG_LoadTexture");
+		logSDLError("IMG_LoadTexture");
 	}
 	return texture;
 }
@@ -62,7 +82,7 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int
 	dst.w = w;
 	dst.h = h;
 	if (SDL_RenderCopy(ren, tex, NULL, &dst) != 0) {
-		logSDLError(std::cout, "SDL_RenderCopy()");
+		logSDLError("SDL_RenderCopy()");
 	}
 }
 
@@ -86,16 +106,16 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y) {
 void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y) {
 	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
 	if (textSurface == nullptr) {
-		logSDLError(std::cout, "TTF_RenderText_Blended");
+		logSDLError("TTF_RenderText_Blended");
 	}
 	//set blend mode to none because we want this surface's alpha to override ontoSurface's alpha (not blend with it)
 	if (SDL_SetSurfaceBlendMode(textSurface, SDL_BLENDMODE_NONE) != 0) {
-		logSDLError(std::cout, "SetSurfaceBlendMode");
+		logSDLError("SetSurfaceBlendMode");
 	}
 
 	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
 	if (SDL_BlitSurface(textSurface, NULL, ontoSurface, &position) != 0) {
-		logSDLError(std::cout, "BlitSurface");
+		logSDLError("BlitSurface");
 	}
 	SDL_FreeSurface(textSurface);
 }
@@ -141,7 +161,7 @@ void hud_update(Hud *hud) {
 
 	if (requiresLocking) {
 		if (SDL_LockSurface(hud->surface) != 0) {
-			logSDLError(std::cout, "SDL_LockSurface()");
+			logSDLError("SDL_LockSurface()");
 		}
 	}
 
@@ -158,22 +178,22 @@ Hud *hud_load(SDL_Renderer *renderer) {
 
 	hud->font = TTF_OpenFont("Vera.ttf", 24);
 	if (hud->font == nullptr) {
-		logSDLError(std::cout, "TTF_OpenFont");
+		logSDLError("TTF_OpenFont");
 	}
 	
 	hud->surface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
 		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 	if (hud->surface == nullptr) {
-		logSDLError(std::cout, "SDL_CreateRGBSurface");
+		logSDLError("SDL_CreateRGBSurface");
 	}
 
 	hud->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
 		SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 	if (hud->texture == nullptr) {
-		logSDLError(std::cout, "SDL_CreateTexture");
+		logSDLError("SDL_CreateTexture");
 	}
 	if (SDL_SetTextureBlendMode(hud->texture, SDL_BLENDMODE_BLEND) != 0) {
-		logSDLError(std::cout, "SDL_SetTextureBlendMode");
+		logSDLError("SDL_SetTextureBlendMode");
 	}
 
 	hud_update(hud);
@@ -258,44 +278,37 @@ int main(int argc, char **argv) {
 	srand((unsigned int) time(NULL)); //seed random number generator with the current time
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		logSDLError(std::cout, "SDL_Init");
-		return 1;
+		logSDLError("SDL_Init");
 	}
 
 	if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) != IMG_INIT_PNG) {
-		logSDLError(std::cout, "IMG_Init");
-		return 1;
+		logSDLError("IMG_Init");
 	}
 
 	if (TTF_Init() == -1) {
-		logSDLError(std::cout, "TTF_Init");
-		return 1;
+		logSDLError("TTF_Init");
 	}
 
 	SDL_Window *window = SDL_CreateWindow("Pong", 600, 600, SCREEN_WIDTH, SCREEN_HEIGHT,
 		SDL_WINDOW_SHOWN);
 	if (window == nullptr) {
-		logSDLError(std::cout, "CreateWindow");
-		return 2;
+		logSDLError("CreateWindow");
 	}
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (renderer == nullptr) {
-		logSDLError(std::cout, "CreateRenderer");
-		return 3;
+		logSDLError("CreateRenderer");
 	}
 
 	Hud *hud = hud_load(renderer);
 
 	PLAYER *human = player_load(renderer, true);
 	if (human == nullptr) {
-		logFatal(std::cout, "Failed to load human");
-		return 6;
+		logFatal("Failed to load human");
 	}
 
 	PLAYER *opponent = player_load(renderer, false);
 	if (opponent == nullptr) {
-		logFatal(std::cout, "Failed to load opponent");
-		return 6;
+		logFatal("Failed to load opponent");
 	}
 
 	BALL *ball = ball_load(renderer);
