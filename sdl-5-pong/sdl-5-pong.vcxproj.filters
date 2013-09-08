@@ -19,4 +19,35 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="ball.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="paddle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="libFLAC-8.dll" />
+    <None Include="libfreetype-6.dll" />
+    <None Include="libjpeg-9.dll" />
+    <None Include="libmikmod-2.dll" />
+    <None Include="libmodplug-1.dll" />
+    <None Include="libogg-0.dll" />
+    <None Include="libpng16-16.dll" />
+    <None Include="libtiff-5.dll" />
+    <None Include="libvorbis-0.dll" />
+    <None Include="libvorbisfile-3.dll" />
+    <None Include="libwebp-4.dll" />
+    <None Include="SDL2.dll" />
+    <None Include="SDL2_image.dll" />
+    <None Include="SDL2_mixer.dll" />
+    <None Include="SDL2_net.dll" />
+    <None Include="SDL2_ttf.dll" />
+    <None Include="smpeg2.dll" />
+    <None Include="zlib1.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="Vera.ttf" />
+  </ItemGroup>
 </Project>
