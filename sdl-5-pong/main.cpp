@@ -214,6 +214,17 @@ int main(int argc, char **argv) {
 		}
 		opponent->pos.y += targetSpeed;
 
+		if (human->pos.y < 0) {
+			human->pos.y = 0;
+		} else if (human->pos.y + human->size.y > SCREEN_HEIGHT) {
+			human->pos.y = SCREEN_HEIGHT - human->size.y;
+		}
+		if (opponent->pos.y < 0) {
+			opponent->pos.y = 0;
+		} else if (opponent->pos.y + opponent->size.y > SCREEN_HEIGHT) {
+			opponent->pos.y = SCREEN_HEIGHT - opponent->size.y;
+		}
+
 		//Movement and collision detection
 		ball->pos.x += ball->speed.x;
 		ball->pos.y += ball->speed.y;
