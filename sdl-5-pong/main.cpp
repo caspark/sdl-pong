@@ -49,8 +49,8 @@ int main(int argc, char **argv) {
 		logSDLError("TTF_Init");
 	}
 
-	SDL_Window *window = SDL_CreateWindow("Pong", 600, 600, SCREEN_WIDTH, SCREEN_HEIGHT,
-		SDL_WINDOW_SHOWN);
+	SDL_Window *window = SDL_CreateWindow("Pong", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 	if (window == nullptr) {
 		logSDLError("CreateWindow");
 	}
