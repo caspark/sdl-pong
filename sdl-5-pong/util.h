@@ -1,3 +1,6 @@
+#ifndef UTIL_H
+#define UTIL_H
+
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
@@ -52,3 +55,5 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, float x, float y);
 * @param color - the color to render the text (alpha component is ignored and always set to 255)
 */
 void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y);
+
+#endif

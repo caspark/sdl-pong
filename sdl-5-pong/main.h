@@ -1,3 +1,6 @@
+#ifndef MAIN_H
+#define MAIN_H
+
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 
@@ -65,3 +68,5 @@ private:
 	SDL_Surface *surface;
 	SDL_Texture *texture;
 };
+
+#endif
