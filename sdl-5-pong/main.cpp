@@ -2,6 +2,7 @@
 #include <iostream>
 #include <time.h>
 #include <stdlib.h>
+#include <exception>
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -10,85 +11,113 @@
 #include "util.h"
 #include "main.h"
 
-void hud_update(Hud *hud) {
-	SDL_FillRect(hud->surface, nullptr, 0);
+Hud::Hud(SDL_Renderer *renderer) {
+	this->renderer = renderer;
+
+	this->font = TTF_OpenFont("Vera.ttf", 24);
+	if (this->font == nullptr) {
+		logSDLError("TTF_OpenFont");
+	}
+	
+	this->surface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
+		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+	if (this->surface == nullptr) {
+		logSDLError("SDL_CreateRGBSurface");
+	}
+
+	this->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+	if (this->texture == nullptr) {
+		logSDLError("SDL_CreateTexture");
+	}
+	if (SDL_SetTextureBlendMode(this->texture, SDL_BLENDMODE_BLEND) != 0) {
+		logSDLError("SDL_SetTextureBlendMode");
+	}
+
+	this->update();
+}
+
+void Hud::update() {
+	SDL_FillRect(this->surface, nullptr, 0);
 
 	//update the hud with new details
 	SDL_Color color = { 255, 0, 0 };
-	renderText("Pong - nuff said.", hud->font, color, hud->surface, 0, 0);
+	renderText("Pong - nuff said.", this->font, color, this->surface, 0, 0);
 	
 	//refresh the texture
-	bool requiresLocking = SDL_MUSTLOCK(hud->surface) != 0;
+	bool requiresLocking = SDL_MUSTLOCK(this->surface) != 0;
 
 	if (requiresLocking) {
-		if (SDL_LockSurface(hud->surface) != 0) {
+		if (SDL_LockSurface(this->surface) != 0) {
 			logSDLError("SDL_LockSurface()");
 		}
 	}
 
-	SDL_Rect hudSurfaceRect = { 0, 0, hud->surface->w, hud->surface->h };
-	SDL_UpdateTexture(hud->texture, &hudSurfaceRect, hud->surface->pixels, hud->surface->pitch);
+	SDL_Rect hudSurfaceRect = { 0, 0, this->surface->w, this->surface->h };
+	SDL_UpdateTexture(this->texture, &hudSurfaceRect, this->surface->pixels, this->surface->pitch);
 
 	if (requiresLocking) {
-		SDL_UnlockSurface(hud->surface);
+		SDL_UnlockSurface(this->surface);
 	}
 }
 
-Hud *hud_load(SDL_Renderer *renderer) {
-	Hud *hud = new Hud;
-
-	hud->font = TTF_OpenFont("Vera.ttf", 24);
-	if (hud->font == nullptr) {
-		logSDLError("TTF_OpenFont");
-	}
-	
-	hud->surface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
-		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	if (hud->surface == nullptr) {
-		logSDLError("SDL_CreateRGBSurface");
-	}
-
-	hud->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	if (hud->texture == nullptr) {
-		logSDLError("SDL_CreateTexture");
-	}
-	if (SDL_SetTextureBlendMode(hud->texture, SDL_BLENDMODE_BLEND) != 0) {
-		logSDLError("SDL_SetTextureBlendMode");
-	}
-
-	hud_update(hud);
-
-	return hud;
+void Hud::render() {
+	renderTexture(this->texture, this->renderer, 0, 0);
 }
 
-void hud_render(Hud *hud, SDL_Renderer *renderer) {
-	renderTexture(hud->texture, renderer, 0, 0);
+Hud::~Hud() {
+	SDL_FreeSurface(this->surface);
+	SDL_DestroyTexture(this->texture);
+	TTF_CloseFont(this->font);
 }
 
-void hud_free(Hud *hud) {
-	SDL_FreeSurface(hud->surface);
-	SDL_DestroyTexture(hud->texture);
-	TTF_CloseFont(hud->font);
-	delete hud;
+Vector2 getCenter(Vector2 pos, Vector2 size) {
+	Vector2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
+	return center;
 }
 
-Player* player_load(SDL_Renderer *renderer, bool isLeft) {
-	Player *player = new Player;
-	player->tex = loadTexture("paddle.png", renderer);
-	if (player->tex == nullptr) {
-		return nullptr;
-	}
+Player::Player(SDL_Renderer *renderer, bool isLeft) {
+	this->renderer = renderer;
+	this->tex = loadTexture("paddle.png", renderer);
+	SDL_assert(this->tex != nullptr);
 	int w, h;
-	SDL_QueryTexture(player->tex, nullptr, nullptr, &w, &h);
-	player->size.x = static_cast<float>(w);
-	player->size.y = static_cast<float>(h);
-	return player;
+	SDL_assert(SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) == 0);
+	this->size.x = static_cast<float>(w);
+	this->size.y = static_cast<float>(h);
 }
 
-void player_free(Player *player) {
-	SDL_DestroyTexture(player->tex);
-	delete player;
+Player::~Player() {
+	SDL_DestroyTexture(tex);
+}
+
+void Player::render() {
+	renderTexture(this->tex, this->renderer, this->pos.x, this->pos.y);
+}
+
+Vector2 Player::getCenter() {
+	return ::getCenter(this->pos, this->size);
+}
+
+Ball::Ball(SDL_Renderer *renderer) {
+	this->renderer = renderer;
+	this->tex = loadTexture("ball.png", renderer);
+	SDL_assert(this->tex != nullptr);
+	int w, h;
+	SDL_assert(SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) == 0);
+	this->size.x = static_cast<float>(w);
+	this->size.y = static_cast<float>(h);
+}
+
+Ball::~Ball() {
+	SDL_DestroyTexture(this->tex);
+}
+
+void Ball::render() {
+	renderTexture(this->tex, renderer, this->pos.x, this->pos.y);
+}
+
+Vector2 Ball::getCenter() {
+	return ::getCenter(this->pos, this->size);
 }
 
 void start_round(Player *player1, Player *player2, Ball *ball) {
@@ -105,42 +134,11 @@ void start_round(Player *player1, Player *player2, Ball *ball) {
 		);
 }
 
-Ball* ball_load(SDL_Renderer *renderer) {
-	Ball *ball = new Ball;
-	ball->tex = loadTexture("ball.png", renderer);
-	if (ball->tex == nullptr) {
-		return nullptr;
-	}
-	int w, h;
-	SDL_QueryTexture(ball->tex, nullptr, nullptr, &w, &h);
-	ball->size.x = static_cast<float>(w);
-	ball->size.y = static_cast<float>(h);
-	return ball;
-}
-
-void ball_free(Ball *ball) {
-	SDL_DestroyTexture(ball->tex);
-	delete ball;
-}
-
 bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
 	return x1 < x2 + w2
 		&& x1 + w1 > x2
 		&& y1 < y2 + h2
 		&& y1 + h1 > y2;
-}
-
-Vector2 getCenter(Vector2 pos, Vector2 size) {
-	Vector2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
-	return center;
-}
-
-Vector2 getCenter(Player *player) {
-	return getCenter(player->pos, player->size);
-}
-
-Vector2 getCenter(Ball *ball) {
-	return getCenter(ball->pos, ball->size);
 }
 
 int main(int argc, char **argv) {
@@ -168,19 +166,19 @@ int main(int argc, char **argv) {
 		logSDLError("CreateRenderer");
 	}
 
-	Hud *hud = hud_load(renderer);
+	Hud *hud = new Hud(renderer);
 
-	Player *human = player_load(renderer, true);
+	Player *human = new Player(renderer, true);
 	if (human == nullptr) {
 		logFatal("Failed to load human");
 	}
 
-	Player *opponent = player_load(renderer, false);
+	Player *opponent = new Player(renderer, false);
 	if (opponent == nullptr) {
 		logFatal("Failed to load opponent");
 	}
 
-	Ball *ball = ball_load(renderer);
+	Ball *ball = new Ball(renderer);
 
 	Score score = {0, 0};
 	start_round(human, opponent, ball);
@@ -213,8 +211,8 @@ int main(int argc, char **argv) {
 		}
 
 		//move opponent player
-		int targetYPos = getCenter(ball).y;
-		int targetSpeed = targetYPos - getCenter(opponent).y;
+		float targetYPos = ball->getCenter().y;
+		float targetSpeed = targetYPos - opponent->getCenter().y;
 		if (targetSpeed > PLAYER_SPEED) {
 			targetSpeed = PLAYER_SPEED;
 		} else if (targetSpeed < -PLAYER_SPEED) {
@@ -266,11 +264,11 @@ int main(int argc, char **argv) {
 		//Render our scene
 		SDL_RenderClear(renderer);
 
-		renderTexture(human->tex, renderer, human->pos.x, human->pos.y);
-		renderTexture(opponent->tex, renderer, opponent->pos.x, opponent->pos.y);
-		renderTexture(ball->tex, renderer, ball->pos.x, ball->pos.y);
+		human->render();
+		opponent->render();
+		ball->render();
 		
-		hud_render(hud, renderer);
+		hud->render();
 
 		SDL_RenderPresent(renderer);
 	}
@@ -278,10 +276,10 @@ int main(int argc, char **argv) {
 	std::cout << "Quitting" << std::endl;
 
 	//cleanup
-	player_free(human);
-	player_free(opponent);
-	ball_free(ball);
-	hud_free(hud);
+	delete human;
+	delete opponent;
+	delete ball;
+	delete hud;
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 

@@ -11,26 +11,57 @@ typedef struct Vector2_struct {
 	float y;
 } Vector2;
 
-typedef struct Player_struct {
+class Player {
+public:
 	Vector2 pos;
 	Vector2 size;
-	SDL_Texture *tex;
-} Player;
 
-typedef struct Ball_struct {
+	Player(SDL_Renderer *renderer, bool isLeft);
+	~Player();
+
+	void render();
+
+	Vector2 getCenter();
+
+private:
+	SDL_Renderer *renderer;
+	SDL_Texture *tex;
+};
+
+class Ball {
+public:
 	Vector2 pos;
 	Vector2 speed;
 	Vector2 size;
+
+	Ball(SDL_Renderer *renderer);
+	~Ball();
+
+	void render();
+
+	Vector2 getCenter();
+
+private:
+	SDL_Renderer *renderer;
 	SDL_Texture *tex;
-} Ball;
+};
 
 typedef struct Score_struct {
 	int human;
 	int opponent;
 } Score;
 
-typedef struct Hud_struct {
+class Hud {
+public:
+	Hud(SDL_Renderer *renderer);
+	~Hud();
+
+	void update();
+	void render();
+
+private:
+	SDL_Renderer *renderer;
 	TTF_Font *font;
 	SDL_Surface *surface;
 	SDL_Texture *texture;
-} Hud;
+};
