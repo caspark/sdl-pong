@@ -6,30 +6,30 @@ const int INITIAL_BALL_X_SPEED = 5;
 const int INITIAL_BALL_Y_SPEED_MIN = 2;
 const int INITIAL_BALL_Y_SPEED_MAX = 5;
 
-typedef struct vec2_struct {
-	int x;
-	int y;
-} VEC2;
+typedef struct Vector2_struct {
+	float x;
+	float y;
+} Vector2;
 
-typedef struct player_struct {
-	VEC2 pos;
-	VEC2 size;
+typedef struct Player_struct {
+	Vector2 pos;
+	Vector2 size;
 	SDL_Texture *tex;
-} PLAYER;
+} Player;
 
-typedef struct ball_struct {
-	VEC2 pos;
-	VEC2 speed;
-	VEC2 size;
+typedef struct Ball_struct {
+	Vector2 pos;
+	Vector2 speed;
+	Vector2 size;
 	SDL_Texture *tex;
-} BALL;
+} Ball;
 
-typedef struct score_struct {
+typedef struct Score_struct {
 	int human;
 	int opponent;
-} SCORE;
+} Score;
 
-typedef struct hud_struct {
+typedef struct Hud_struct {
 	TTF_Font *font;
 	SDL_Surface *surface;
 	SDL_Texture *texture;

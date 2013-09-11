@@ -65,6 +65,10 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y) {
 	renderTexture(tex, ren, x, y, w, h);
 }
 
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, float x, float y) {
+	renderTexture(tex, ren, static_cast<int>(x), static_cast<int>(y));
+}
+
 void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y) {
 	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
 	if (textSurface == nullptr) {

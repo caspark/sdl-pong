@@ -73,22 +73,25 @@ void hud_free(Hud *hud) {
 	delete hud;
 }
 
-PLAYER* player_load(SDL_Renderer *renderer, bool isLeft) {
-	PLAYER *player = new PLAYER;
+Player* player_load(SDL_Renderer *renderer, bool isLeft) {
+	Player *player = new Player;
 	player->tex = loadTexture("paddle.png", renderer);
 	if (player->tex == nullptr) {
 		return nullptr;
 	}
-	SDL_QueryTexture(player->tex, nullptr, nullptr, &(player->size.x), &(player->size.y));
+	int w, h;
+	SDL_QueryTexture(player->tex, nullptr, nullptr, &w, &h);
+	player->size.x = static_cast<float>(w);
+	player->size.y = static_cast<float>(h);
 	return player;
 }
 
-void player_free(PLAYER *player) {
+void player_free(Player *player) {
 	SDL_DestroyTexture(player->tex);
 	delete player;
 }
 
-void start_round(PLAYER *player1, PLAYER *player2, BALL *ball) {
+void start_round(Player *player1, Player *player2, Ball *ball) {
 	player1->pos.x = 0;
 	player1->pos.y = SCREEN_HEIGHT / 2 - player1->size.y / 2;
 	player2->pos.x = SCREEN_WIDTH - player2->size.x;
@@ -96,42 +99,47 @@ void start_round(PLAYER *player1, PLAYER *player2, BALL *ball) {
 	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
 	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
 	ball->speed.x = INITIAL_BALL_X_SPEED;
-	ball->speed.y = (rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
-		- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN;
+	ball->speed.y = static_cast<float>(
+			(rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
+			- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN
+		);
 }
 
-BALL* ball_load(SDL_Renderer *renderer) {
-	BALL *ball = new BALL;
+Ball* ball_load(SDL_Renderer *renderer) {
+	Ball *ball = new Ball;
 	ball->tex = loadTexture("ball.png", renderer);
 	if (ball->tex == nullptr) {
 		return nullptr;
 	}
-	SDL_QueryTexture(ball->tex, nullptr, nullptr, &(ball->size.x), &(ball->size.y));
+	int w, h;
+	SDL_QueryTexture(ball->tex, nullptr, nullptr, &w, &h);
+	ball->size.x = static_cast<float>(w);
+	ball->size.y = static_cast<float>(h);
 	return ball;
 }
 
-void ball_free(BALL *ball) {
+void ball_free(Ball *ball) {
 	SDL_DestroyTexture(ball->tex);
 	delete ball;
 }
 
-bool rects_overlap(VEC2 p1, VEC2 s1, VEC2 p2, VEC2 s2) {
-	return p1.x < p2.x + s2.x
-		&& p1.x + s1.x > p2.x
-		&& p1.y < p2.y + s2.y
-		&& p1.y + s1.y > p2.y;
+bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
+	return x1 < x2 + w2
+		&& x1 + w1 > x2
+		&& y1 < y2 + h2
+		&& y1 + h1 > y2;
 }
 
-VEC2 getCenter(VEC2 pos, VEC2 size) {
-	VEC2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
+Vector2 getCenter(Vector2 pos, Vector2 size) {
+	Vector2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
 	return center;
 }
 
-VEC2 getCenter(PLAYER *player) {
+Vector2 getCenter(Player *player) {
 	return getCenter(player->pos, player->size);
 }
 
-VEC2 getCenter(BALL *ball) {
+Vector2 getCenter(Ball *ball) {
 	return getCenter(ball->pos, ball->size);
 }
 
@@ -162,19 +170,19 @@ int main(int argc, char **argv) {
 
 	Hud *hud = hud_load(renderer);
 
-	PLAYER *human = player_load(renderer, true);
+	Player *human = player_load(renderer, true);
 	if (human == nullptr) {
 		logFatal("Failed to load human");
 	}
 
-	PLAYER *opponent = player_load(renderer, false);
+	Player *opponent = player_load(renderer, false);
 	if (opponent == nullptr) {
 		logFatal("Failed to load opponent");
 	}
 
-	BALL *ball = ball_load(renderer);
+	Ball *ball = ball_load(renderer);
 
-	SCORE score = {0, 0};
+	Score score = {0, 0};
 	start_round(human, opponent, ball);
 
 	bool quit = false;
@@ -230,13 +238,13 @@ int main(int argc, char **argv) {
 		ball->pos.y += ball->speed.y;
 
 		//FIXME ball can go so fast it will move past the paddles
-		if (rects_overlap(human->pos, human->size, ball->pos, ball->size)) {
-			ball->speed.x *= -1;
-			ball->speed.x += ((ball->speed.x > 0) - (ball->speed.x < 0)) * 1;
+		if (rects_overlap(human->pos.x, human->pos.y, human->size.x, human->size.y,
+				ball->pos.x + ball->speed.x, ball->pos.y, ball->size.x - ball->speed.x, ball->size.y)) {
+			ball->speed.x = abs(ball->speed.x) + 1;
 		}
-		if (rects_overlap(opponent->pos, opponent->size, ball->pos, ball->size)) {
-			ball->speed.x *= -1;
-			ball->speed.x += ((ball->speed.x > 0) - (ball->speed.x < 0)) * 1;
+		if (rects_overlap(opponent->pos.x, opponent->pos.y, opponent->size.x, opponent->size.y,
+				ball->pos.x - ball->speed.x, ball->pos.y, ball->size.x + ball->speed.x, ball->size.y)) {
+			ball->speed.x = -(abs(ball->speed.x) + 1);
 		}
 
 		if (ball->pos.y < 0 || ball->pos.y + ball->size.y > SCREEN_HEIGHT) {
