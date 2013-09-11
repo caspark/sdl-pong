@@ -11,6 +11,32 @@
 #include "util.h"
 #include "main.h"
 
+void start_round(Player *player1, Player *player2, Ball *ball) {
+	player1->pos.x = 0;
+	player1->pos.y = SCREEN_HEIGHT / 2 - player1->size.y / 2;
+	player2->pos.x = SCREEN_WIDTH - player2->size.x;
+	player2->pos.y = SCREEN_HEIGHT / 2 - player2->size.y / 2;
+	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
+	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
+	ball->speed.x = INITIAL_BALL_X_SPEED;
+	ball->speed.y = static_cast<float>(
+			(rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
+			- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN
+		);
+}
+
+bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
+	return x1 < x2 + w2
+		&& x1 + w1 > x2
+		&& y1 < y2 + h2
+		&& y1 + h1 > y2;
+}
+
+Vector2 getCenter(Vector2 pos, Vector2 size) {
+	Vector2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
+	return center;
+}
+
 Hud::Hud(SDL_Renderer *renderer) {
 	this->renderer = renderer;
 
@@ -71,11 +97,6 @@ Hud::~Hud() {
 	TTF_CloseFont(this->font);
 }
 
-Vector2 getCenter(Vector2 pos, Vector2 size) {
-	Vector2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
-	return center;
-}
-
 Player::Player(SDL_Renderer *renderer, bool isLeft) {
 	this->renderer = renderer;
 	this->tex = loadTexture("paddle.png", renderer);
@@ -118,27 +139,6 @@ void Ball::render() {
 
 Vector2 Ball::getCenter() {
 	return ::getCenter(this->pos, this->size);
-}
-
-void start_round(Player *player1, Player *player2, Ball *ball) {
-	player1->pos.x = 0;
-	player1->pos.y = SCREEN_HEIGHT / 2 - player1->size.y / 2;
-	player2->pos.x = SCREEN_WIDTH - player2->size.x;
-	player2->pos.y = SCREEN_HEIGHT / 2 - player2->size.y / 2;
-	ball->pos.x = SCREEN_WIDTH / 2 - ball->size.x / 2;
-	ball->pos.y = SCREEN_HEIGHT / 2 - ball->size.y / 2;
-	ball->speed.x = INITIAL_BALL_X_SPEED;
-	ball->speed.y = static_cast<float>(
-			(rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
-			- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN
-		);
-}
-
-bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
-	return x1 < x2 + w2
-		&& x1 + w1 > x2
-		&& y1 < y2 + h2
-		&& y1 + h1 > y2;
 }
 
 int main(int argc, char **argv) {
