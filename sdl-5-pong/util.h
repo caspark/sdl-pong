@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <string>
+
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>

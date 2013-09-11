@@ -21,6 +21,12 @@
     <ClCompile Include="util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="entities.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hud.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="ball.png">
@@ -58,6 +64,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="entities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hud.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

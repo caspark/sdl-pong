@@ -9,6 +9,8 @@
 #include <SDL_ttf.h>
 
 #include "util.h"
+#include "entities.h"
+#include "hud.h"
 #include "main.h"
 
 void start_round(Player *player1, Player *player2, Ball *ball) {
@@ -30,115 +32,6 @@ bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, f
 		&& x1 + w1 > x2
 		&& y1 < y2 + h2
 		&& y1 + h1 > y2;
-}
-
-Vector2 getCenter(Vector2 pos, Vector2 size) {
-	Vector2 center = {pos.x + size.x / 2, pos.y + size.y / 2};
-	return center;
-}
-
-Hud::Hud(SDL_Renderer *renderer) {
-	this->renderer = renderer;
-
-	this->font = TTF_OpenFont("Vera.ttf", 24);
-	if (this->font == nullptr) {
-		logSDLError("TTF_OpenFont");
-	}
-	
-	this->surface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
-		0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	if (this->surface == nullptr) {
-		logSDLError("SDL_CreateRGBSurface");
-	}
-
-	this->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
-	if (this->texture == nullptr) {
-		logSDLError("SDL_CreateTexture");
-	}
-	if (SDL_SetTextureBlendMode(this->texture, SDL_BLENDMODE_BLEND) != 0) {
-		logSDLError("SDL_SetTextureBlendMode");
-	}
-
-	this->update();
-}
-
-void Hud::update() {
-	SDL_FillRect(this->surface, nullptr, 0);
-
-	//update the hud with new details
-	SDL_Color color = { 255, 0, 0 };
-	renderText("Pong - nuff said.", this->font, color, this->surface, 0, 0);
-	
-	//refresh the texture
-	bool requiresLocking = SDL_MUSTLOCK(this->surface) != 0;
-
-	if (requiresLocking) {
-		if (SDL_LockSurface(this->surface) != 0) {
-			logSDLError("SDL_LockSurface()");
-		}
-	}
-
-	SDL_Rect hudSurfaceRect = { 0, 0, this->surface->w, this->surface->h };
-	SDL_UpdateTexture(this->texture, &hudSurfaceRect, this->surface->pixels, this->surface->pitch);
-
-	if (requiresLocking) {
-		SDL_UnlockSurface(this->surface);
-	}
-}
-
-void Hud::render() {
-	renderTexture(this->texture, this->renderer, 0, 0);
-}
-
-Hud::~Hud() {
-	SDL_FreeSurface(this->surface);
-	SDL_DestroyTexture(this->texture);
-	TTF_CloseFont(this->font);
-}
-
-Player::Player(SDL_Renderer *renderer, bool isLeft) {
-	this->renderer = renderer;
-	this->tex = loadTexture("paddle.png", renderer);
-	SDL_assert(this->tex != nullptr);
-	int w, h;
-	SDL_assert(SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) == 0);
-	this->size.x = static_cast<float>(w);
-	this->size.y = static_cast<float>(h);
-}
-
-Player::~Player() {
-	SDL_DestroyTexture(tex);
-}
-
-void Player::render() {
-	renderTexture(this->tex, this->renderer, this->pos.x, this->pos.y);
-}
-
-Vector2 Player::getCenter() {
-	return ::getCenter(this->pos, this->size);
-}
-
-Ball::Ball(SDL_Renderer *renderer) {
-	this->renderer = renderer;
-	this->tex = loadTexture("ball.png", renderer);
-	SDL_assert(this->tex != nullptr);
-	int w, h;
-	SDL_assert(SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) == 0);
-	this->size.x = static_cast<float>(w);
-	this->size.y = static_cast<float>(h);
-}
-
-Ball::~Ball() {
-	SDL_DestroyTexture(this->tex);
-}
-
-void Ball::render() {
-	renderTexture(this->tex, renderer, this->pos.x, this->pos.y);
-}
-
-Vector2 Ball::getCenter() {
-	return ::getCenter(this->pos, this->size);
 }
 
 int main(int argc, char **argv) {
@@ -166,7 +59,7 @@ int main(int argc, char **argv) {
 		logSDLError("CreateRenderer");
 	}
 
-	Hud *hud = new Hud(renderer);
+	Hud *hud = new Hud(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	Player *human = new Player(renderer, true);
 	if (human == nullptr) {
