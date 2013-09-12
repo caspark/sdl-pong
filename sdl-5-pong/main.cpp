@@ -16,7 +16,7 @@ const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 
 int main(int argc, char **argv) {
-	srand((unsigned int) time(nullptr)); //seed random number generator with the current time
+	srand(static_cast<unsigned int>(time(nullptr))); //seed random number generator with the current time
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		logSDLError("SDL_Init");
