@@ -80,6 +80,7 @@
     <ClCompile Include="hud.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="entities.cpp" />
+    <ClCompile Include="world.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -112,8 +113,8 @@
   <ItemGroup>
     <ClInclude Include="entities.h" />
     <ClInclude Include="hud.h" />
-    <ClInclude Include="main.h" />
     <ClInclude Include="util.h" />
+    <ClInclude Include="world.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

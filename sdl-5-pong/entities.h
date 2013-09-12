@@ -12,6 +12,7 @@ class Player {
 public:
 	Vector2 pos;
 	Vector2 size;
+	int score;
 
 	Player(SDL_Renderer *renderer, bool isLeft);
 	~Player();

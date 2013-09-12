@@ -7,6 +7,12 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
+// A macro to disallow the copy constructor and operator= functions
+// This should be used in the private: declarations for a class
+#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
+  TypeName(const TypeName&);               \
+  void operator=(const TypeName&)
+
 void handleFatal(int exitcode);
 
 void logSDLError(const std::string &sdlFunctionName);
@@ -57,5 +63,7 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, float x, float y);
 * @param color - the color to render the text (alpha component is ignored and always set to 255)
 */
 void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y);
+
+bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
 #endif

@@ -14,6 +14,7 @@ Player::Player(SDL_Renderer *renderer, bool isLeft) {
 	SDL_assert(SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) == 0);
 	this->size.x = static_cast<float>(w);
 	this->size.y = static_cast<float>(h);
+	this->score = 0;
 }
 
 Player::~Player() {
