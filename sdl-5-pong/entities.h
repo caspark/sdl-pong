@@ -35,7 +35,7 @@ public:
 	Vector2 speed;
 	Vector2 size;
 
-	Ball(SDL_Renderer *renderer);
+	explicit Ball(SDL_Renderer *renderer);
 	~Ball();
 
 	void render();
