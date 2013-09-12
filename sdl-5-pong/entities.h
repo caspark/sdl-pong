@@ -3,6 +3,8 @@
 
 #include <SDL.h>
 
+#include "util.h"
+
 typedef struct Vector2_struct {
 	float x;
 	float y;
@@ -22,6 +24,7 @@ public:
 	Vector2 getCenter();
 
 private:
+	DISALLOW_COPY_AND_ASSIGN(Player);
 	SDL_Renderer *renderer;
 	SDL_Texture *tex;
 };
@@ -40,6 +43,7 @@ public:
 	Vector2 getCenter();
 
 private:
+	DISALLOW_COPY_AND_ASSIGN(Ball);
 	SDL_Renderer *renderer;
 	SDL_Texture *tex;
 };

@@ -19,6 +19,7 @@ public:
 	void render();
 
 private:
+	DISALLOW_COPY_AND_ASSIGN(World);
 	int width;
 	int height;
 };
