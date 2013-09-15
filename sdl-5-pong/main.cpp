@@ -16,26 +16,6 @@
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 
-//-------------------------------- FIXME replace this time function with SDL performance counter instead
-#include <windows.h>
-float time()
-{
-    static __int64 start = 0;
-    static __int64 frequency = 0;
-
-    if (start==0)
-    {
-        QueryPerformanceCounter((LARGE_INTEGER*)&start);
-        QueryPerformanceFrequency((LARGE_INTEGER*)&frequency);
-        return 0.0f;
-    }
-
-    __int64 counter = 0;
-    QueryPerformanceCounter((LARGE_INTEGER*)&counter);
-    return (float) ((counter - start) / double(frequency));
-}
-
-
 struct State
 {
 	float x;
@@ -158,14 +138,14 @@ int main(int argc, char **argv) {
 	float t = 0.0f;
 	float dt = PHYSICS_TIMESTEP;
 
-	float currentTime = time();
+	Uint64 currentTime = SDL_GetPerformanceCounter();
 	float accumulator = 0;
 
 	bool quit = false;
 	SDL_Event event;
 	while (!quit) {
-		const float newTime = time();
-		float deltaTime = newTime - currentTime; //aka time for this frame
+		const Uint64 newTime = SDL_GetPerformanceCounter();
+		float deltaTime = static_cast<float>(newTime - currentTime) / SDL_GetPerformanceFrequency(); //aka time for this frame
 		currentTime = newTime;
 
 		if (deltaTime > 0.25f) {
