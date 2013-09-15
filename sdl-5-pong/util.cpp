@@ -80,7 +80,10 @@ int randomIntInRange(int min, int max) {
 	// dealing with rand()'s inadequacies as per http://eternallyconfuzzled.com/arts/jsw_art_rand.aspx
 	double uniformDeviate = rand() * (1.0 / (RAND_MAX + 1.0));
 	// the +1 makes this a closed rather than half open range
-	return static_cast<int>(min + uniformDeviate * (max + 1 - min));
+	int generatedRandom = static_cast<int>(min + uniformDeviate * (max + 1 - min));
+	SDL_assert(generatedRandom >= min);
+	SDL_assert(generatedRandom <= max);
+	return generatedRandom;
 }
 
 int randomSignForInt() {
