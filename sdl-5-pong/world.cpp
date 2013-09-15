@@ -97,28 +97,34 @@ void World::update(WorldState &state, float timeDelta) {
 			state.ball.pos.x, state.ball.pos.y,
 			state.ball.size.x * 2, state.ball.size.y)) {
 		state.ball.speed.x = abs(state.ball.speed.x) * 1.1f;
+		state.ball.pos.x = state.human.pos.x + state.human.size.x;
 		std::cout << "Paddle collision (HUMAN) - ball speed is now " << state.ball.speed.x << std::endl;
 	}
 	if (rects_overlap(state.opponent.pos.x, state.opponent.pos.y, state.opponent.size.x, state.opponent.size.y,
 			state.ball.pos.x - state.ball.size.x, state.ball.pos.y,
 			state.ball.size.x * 2, state.ball.size.y)) {
 		state.ball.speed.x = -abs(state.ball.speed.x) * 1.1f;
+		state.ball.pos.x = state.opponent.pos.x - state.ball.size.x;
 		std::cout << "Paddle collision (OPPON) - ball speed is now " << state.ball.speed.x << std::endl;
 	}
 
-	if (state.ball.pos.y < 0 || state.ball.pos.y + state.ball.size.y > height) {
+	if (state.ball.pos.y < 0) {
 		state.ball.speed.y *= -1;
+		state.ball.pos.y = 0;
+	} else if (state.ball.pos.y + state.ball.size.y > this->height) {
+		state.ball.speed.y *= -1;
+		state.ball.pos.y = this->height - state.ball.size.y;
 	}
 
 	if (state.human.pos.y < 0) {
 		state.human.pos.y = 0;
-	} else if (state.human.pos.y + state.human.size.y > height) {
-		state.human.pos.y = height - state.human.size.y;
+	} else if (state.human.pos.y + state.human.size.y > this->height) {
+		state.human.pos.y = this->height - state.human.size.y;
 	}
 	if (state.opponent.pos.y < 0) {
 		state.opponent.pos.y = 0;
-	} else if (state.opponent.pos.y + state.opponent.size.y > height) {
-		state.opponent.pos.y = height - state.opponent.size.y;
+	} else if (state.opponent.pos.y + state.opponent.size.y > this->height) {
+		state.opponent.pos.y = this->height - state.opponent.size.y;
 	}
 
 	if (state.ball.pos.x + state.ball.size.x < 0) {
