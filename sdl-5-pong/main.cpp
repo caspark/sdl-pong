@@ -69,7 +69,6 @@ int main(int argc, char **argv) {
 	Hud *hud = new Hud(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 	drawUI(hud, currentWorldState);
 
-	float t = 0.0f;
 	float dt = PHYSICS_TIMESTEP;
 
 	Uint64 currentTime = SDL_GetPerformanceCounter();
@@ -98,7 +97,6 @@ int main(int argc, char **argv) {
 				|| currentWorldState.opponentScore != previousWorldState.opponentScore) {
 					drawUI(hud, currentWorldState);
 			}
-			t += dt;
 			++simCount;
 		}
 		if (simCount > 1) {
