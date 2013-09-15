@@ -5,23 +5,36 @@
 
 #include "util.h"
 
-typedef struct Vector2_struct {
+class Vector2 {
+public:
 	float x;
 	float y;
-} Vector2;
+
+	Vector2();
+	Vector2(float x, float y);
+};
+
+class MovingRect {
+public:
+	Vector2 pos;
+	Vector2 speed;
+	Vector2 size;
+
+	MovingRect();
+
+	Vector2 getCenter();
+
+	static MovingRect lerpBetween(const MovingRect &start, const MovingRect &finish, float progress);
+};
 
 class Player {
 public:
-	Vector2 pos;
-	Vector2 size;
 	int score;
 
-	Player(SDL_Renderer *renderer, bool isLeft);
+	Player(SDL_Renderer *renderer, MovingRect &state);
 	~Player();
 
-	void render();
-
-	Vector2 getCenter();
+	void render(MovingRect &state);
 
 private:
 	DISALLOW_COPY_AND_ASSIGN(Player);
@@ -31,16 +44,10 @@ private:
 
 class Ball {
 public:
-	Vector2 pos;
-	Vector2 speed;
-	Vector2 size;
-
-	explicit Ball(SDL_Renderer *renderer);
+	Ball(SDL_Renderer *renderer, MovingRect &state);
 	~Ball();
 
-	void render();
-
-	Vector2 getCenter();
+	void render(MovingRect &state);
 
 private:
 	DISALLOW_COPY_AND_ASSIGN(Ball);

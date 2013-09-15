@@ -66,4 +66,32 @@ void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSu
 
 bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
+/**
+* Returns an integer between the closed range min to max. (i.e. if min is 1 and max is 3, 
+* then 1, 2, or 3 will be returned.)
+*/
+int randomIntInRange(int min, int max);
+
+/* Has a 50/50 chance of returning 1 or -1 */ 
+int randomSignForInt();
+
+class FpsTracker {
+public:
+	explicit FpsTracker(int numberOfSamples);
+	~FpsTracker();
+	/**
+	* @param frameTime the current frame count
+	* @return the running average of the provided frame times
+	*/
+	float calculateAverageFrameTime(float frameTime);
+
+private:
+	DISALLOW_COPY_AND_ASSIGN(FpsTracker);
+	int frameIndex;
+	float totalFrameTime;
+	float *frameTimes;
+	int numberOfSamples;
+	int samplesSoFar;
+};
+
 #endif

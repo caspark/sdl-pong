@@ -69,26 +69,48 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, float x, float y) {
 	renderTexture(tex, ren, static_cast<int>(x), static_cast<int>(y));
 }
 
-void renderText(char *text, TTF_Font *font, SDL_Color color, SDL_Surface *ontoSurface, int x, int y) {
-	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, color);
-	if (textSurface == nullptr) {
-		logSDLError("TTF_RenderText_Blended");
-	}
-	//set blend mode to none because we want this surface's alpha to override ontoSurface's alpha (not blend with it)
-	if (SDL_SetSurfaceBlendMode(textSurface, SDL_BLENDMODE_NONE) != 0) {
-		logSDLError("SetSurfaceBlendMode");
-	}
-
-	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
-	if (SDL_BlitSurface(textSurface, nullptr, ontoSurface, &position) != 0) {
-		logSDLError("BlitSurface");
-	}
-	SDL_FreeSurface(textSurface);
-}
-
 bool rects_overlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
 	return x1 < x2 + w2
 		&& x1 + w1 > x2
 		&& y1 < y2 + h2
 		&& y1 + h1 > y2;
+}
+
+int randomIntInRange(int min, int max) {
+	// dealing with rand()'s inadequacies as per http://eternallyconfuzzled.com/arts/jsw_art_rand.aspx
+	double uniformDeviate = rand() * (1.0 / (RAND_MAX + 1.0));
+	// the +1 makes this a closed rather than half open range
+	return static_cast<int>(min + uniformDeviate * (max + 1 - min));
+}
+
+int randomSignForInt() {
+	return randomIntInRange(0, 1) * 2 - 1;
+}
+
+FpsTracker::FpsTracker(int numberOfSamples) {
+	this->frameIndex = 0;
+	this->totalFrameTime = 0;
+	this->frameTimes = new float[numberOfSamples];
+	this->numberOfSamples = numberOfSamples;
+	this->samplesSoFar = 0;
+}
+
+FpsTracker::~FpsTracker() {
+	delete[] frameTimes;
+}
+
+float FpsTracker::calculateAverageFrameTime(float frameTime) {
+	if (this->samplesSoFar < this->numberOfSamples) {
+		this->samplesSoFar += 1;
+	} else {
+		this->totalFrameTime -= this->frameTimes[this->frameIndex];
+	}
+	this->totalFrameTime += frameTime;
+	this->frameTimes[this->frameIndex] = frameTime;
+	this->frameIndex += 1;
+	if (this->frameIndex == this->numberOfSamples) {
+		this->frameIndex = 0;
+	}
+
+	return this->totalFrameTime/this->samplesSoFar;
 }

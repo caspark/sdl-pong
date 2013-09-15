@@ -11,19 +11,35 @@
 #include "entities.h"
 #include "util.h"
 
-const int PLAYER_SPEED = 5;
-const int INITIAL_BALL_X_SPEED = 5;
-const int INITIAL_BALL_Y_SPEED_MIN = 2;
-const int INITIAL_BALL_Y_SPEED_MAX = 5;
+const float PLAYER_SPEED = 7 / PHYSICS_TIMESTEP;
+const float INITIAL_BALL_X_SPEED = 5 / PHYSICS_TIMESTEP;
+const int INITIAL_BALL_Y_SPEED_MIN = static_cast<int>(2 / PHYSICS_TIMESTEP);
+const int INITIAL_BALL_Y_SPEED_MAX = static_cast<int>(5 / PHYSICS_TIMESTEP);
 
-World::World(SDL_Renderer *renderer, int width, int height) {
+WorldState::WorldState() {
+	this->human = MovingRect();
+	this->humanScore = 0;
+	this->opponent = MovingRect();
+	this->opponentScore = 0;
+	this->ball = MovingRect();
+}
+
+WorldState WorldState::lerpBetween(const WorldState &start, const WorldState &finish, float progress) {
+	WorldState lerped;
+	lerped.human = MovingRect::lerpBetween(start.human, finish.human, progress);
+	lerped.opponent = MovingRect::lerpBetween(start.opponent, finish.opponent, progress);
+	lerped.ball = MovingRect::lerpBetween(start.ball, finish.ball, progress);
+	return lerped;
+}
+
+World::World(SDL_Renderer *renderer, int width, int height, WorldState &worldState) {
 	SDL_assert(renderer != nullptr);
 	this->width = width;
 	this->height = height;
 
-	this->human = new Player(renderer, true);
-	this->opponent = new Player(renderer, false);
-	this->ball = new Ball(renderer);
+	this->human = new Player(renderer, worldState.human);
+	this->opponent = new Player(renderer, worldState.opponent);
+	this->ball = new Ball(renderer, worldState.ball);
 }
 
 World::~World() {
@@ -32,85 +48,94 @@ World::~World() {
 	delete this->ball;
 }
 
-void World::startRound() {
-	this->human->pos.x = 0;
-	this->human->pos.y = height / 2 - this->human->size.y / 2;
-	this->opponent->pos.x = width - this->opponent->size.x;
-	this->opponent->pos.y = height / 2 - this->opponent->size.y / 2;
-	this->ball->pos.x = width / 2 - this->ball->size.x / 2;
-	this->ball->pos.y = height / 2 - this->ball->size.y / 2;
-	this->ball->speed.x = INITIAL_BALL_X_SPEED;
-	this->ball->speed.y = static_cast<float>(
-			(rand() % ((INITIAL_BALL_Y_SPEED_MAX - INITIAL_BALL_Y_SPEED_MIN) * 2))
-			- INITIAL_BALL_Y_SPEED_MAX + INITIAL_BALL_Y_SPEED_MIN
+void World::startRound(WorldState &state) {
+	state.human.pos.x = 0;
+	state.human.pos.y = height / 2 - state.human.size.y / 2;
+
+	state.opponent.pos.x = width - state.opponent.size.x;
+	state.opponent.pos.y = height / 2 - state.opponent.size.y / 2;
+
+	state.ball.pos.x = width / 2 - state.ball.size.x / 2;
+	state.ball.pos.y = height / 2 - state.ball.size.y / 2;
+	state.ball.speed.x = INITIAL_BALL_X_SPEED;
+	state.ball.speed.y = static_cast<float>(
+			randomIntInRange(INITIAL_BALL_Y_SPEED_MIN, INITIAL_BALL_Y_SPEED_MAX) * randomSignForInt()
 		);
 }
 
-void World::update() {
+void World::update(WorldState &state, float timeDelta) {
 	//handle non-event-based input
 	const Uint8 *keysDown = SDL_GetKeyboardState(nullptr);
 	if (keysDown[SDL_SCANCODE_UP]) {
-		this->human->pos.y -= PLAYER_SPEED;
+		state.human.speed.y = -PLAYER_SPEED;
 	} else if (keysDown[SDL_SCANCODE_DOWN]) {
-		this->human->pos.y += PLAYER_SPEED;
+		state.human.speed.y = PLAYER_SPEED;
+	} else {
+		state.human.speed.y = 0;
 	}
 
-	//move this->opponent player
-	float targetYPos = this->ball->getCenter().y;
-	float targetSpeed = targetYPos - this->opponent->getCenter().y;
-	if (targetSpeed > PLAYER_SPEED) {
-		targetSpeed = PLAYER_SPEED;
-	} else if (targetSpeed < -PLAYER_SPEED) {
-		targetSpeed = -PLAYER_SPEED;
-	}
-	this->opponent->pos.y += targetSpeed;
-
-	if (this->human->pos.y < 0) {
-		this->human->pos.y = 0;
-	} else if (this->human->pos.y + this->human->size.y > height) {
-		this->human->pos.y = height - this->human->size.y;
-	}
-	if (this->opponent->pos.y < 0) {
-		this->opponent->pos.y = 0;
-	} else if (this->opponent->pos.y + this->opponent->size.y > height) {
-		this->opponent->pos.y = height - this->opponent->size.y;
+	//"ai" for opponent player
+	float aiIdealDistanceToCover = state.ball.getCenter().y - state.opponent.getCenter().y;
+	if (aiIdealDistanceToCover > PLAYER_SPEED * timeDelta) {
+		state.opponent.speed.y = PLAYER_SPEED;
+	} else if (aiIdealDistanceToCover < -PLAYER_SPEED * timeDelta) {
+		state.opponent.speed.y = -PLAYER_SPEED;
+	} else {
+		state.opponent.speed.y = 0;
 	}
 
-	//Movement and collision detection
-	this->ball->pos.x += this->ball->speed.x;
-	this->ball->pos.y += this->ball->speed.y;
+	//simulate
+	state.human.pos.y += state.human.speed.y * timeDelta;
+	state.opponent.pos.y += state.opponent.speed.y * timeDelta;
+	state.ball.pos.x += state.ball.speed.x * timeDelta;
+	state.ball.pos.y += state.ball.speed.y * timeDelta;
 
-	//FIXME this->ball can go so fast it will move past the paddles
-	if (rects_overlap(this->human->pos.x, this->human->pos.y, this->human->size.x, this->human->size.y,
-			this->ball->pos.x + this->ball->speed.x, this->ball->pos.y,
-			this->ball->size.x - this->ball->speed.x, this->ball->size.y)) {
-		this->ball->speed.x = abs(this->ball->speed.x) + 1;
+	//fixup
+
+	//FIXME ball can go so fast it will move past the paddles
+	if (rects_overlap(state.human.pos.x, state.human.pos.y, state.human.size.x, state.human.size.y,
+			state.ball.pos.x, state.ball.pos.y,
+			state.ball.size.x * 2, state.ball.size.y)) {
+		state.ball.speed.x = abs(state.ball.speed.x) * 1.1f;
+		std::cout << "Paddle collision (HUMAN) - ball speed is now " << state.ball.speed.x << std::endl;
 	}
-	if (rects_overlap(this->opponent->pos.x, this->opponent->pos.y, this->opponent->size.x, this->opponent->size.y,
-			this->ball->pos.x - this->ball->speed.x, this->ball->pos.y,
-			this->ball->size.x + this->ball->speed.x, this->ball->size.y)) {
-		this->ball->speed.x = -(abs(this->ball->speed.x) + 1);
+	if (rects_overlap(state.opponent.pos.x, state.opponent.pos.y, state.opponent.size.x, state.opponent.size.y,
+			state.ball.pos.x - state.ball.size.x, state.ball.pos.y,
+			state.ball.size.x * 2, state.ball.size.y)) {
+		state.ball.speed.x = -abs(state.ball.speed.x) * 1.1f;
+		std::cout << "Paddle collision (OPPON) - ball speed is now " << state.ball.speed.x << std::endl;
 	}
 
-	if (this->ball->pos.y < 0 || this->ball->pos.y + this->ball->size.y > height) {
-		this->ball->speed.y *= -1;
+	if (state.ball.pos.y < 0 || state.ball.pos.y + state.ball.size.y > height) {
+		state.ball.speed.y *= -1;
 	}
 
-	if (this->ball->pos.x < 0) {
-		++this->opponent->score;
-		std::cout << "AI player wins round! Score: " << this->human->score 
-			<< " | " << this->opponent->score << std::endl;
-		startRound();
-	} else if (this->ball->pos.x + this->ball->size.x > width) {
-		++this->human->score;
-		std::cout << "Human player wins round! Score: " << this->human->score 
-			<< " | " << this->opponent->score << std::endl;
-		startRound();
+	if (state.human.pos.y < 0) {
+		state.human.pos.y = 0;
+	} else if (state.human.pos.y + state.human.size.y > height) {
+		state.human.pos.y = height - state.human.size.y;
+	}
+	if (state.opponent.pos.y < 0) {
+		state.opponent.pos.y = 0;
+	} else if (state.opponent.pos.y + state.opponent.size.y > height) {
+		state.opponent.pos.y = height - state.opponent.size.y;
+	}
+
+	if (state.ball.pos.x + state.ball.size.x < 0) {
+		++state.opponentScore;
+		std::cout << "AI player wins round! Score: " << state.humanScore 
+			<< " | " << state.opponentScore << std::endl;
+		startRound(state);
+	} else if (state.ball.pos.x > width) {
+		++state.humanScore;
+		std::cout << "Human player wins round! Score: " << state.humanScore 
+			<< " | " << state.opponentScore << std::endl;
+		startRound(state);
 	}
 }
 
-void World::render() {
-	this->human->render();
-	this->opponent->render();
-	this->ball->render();
+void World::render(WorldState &state) {
+	this->human->render(state.human);
+	this->opponent->render(state.opponent);
+	this->ball->render(state.ball);
 }

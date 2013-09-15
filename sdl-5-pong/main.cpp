@@ -1,3 +1,4 @@
+#include <sstream>
 #include <string>
 #include <iostream>
 #include <time.h>
@@ -14,6 +15,86 @@
 
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
+
+//-------------------------------- FIXME replace this time function with SDL performance counter instead
+#include <windows.h>
+float time()
+{
+    static __int64 start = 0;
+    static __int64 frequency = 0;
+
+    if (start==0)
+    {
+        QueryPerformanceCounter((LARGE_INTEGER*)&start);
+        QueryPerformanceFrequency((LARGE_INTEGER*)&frequency);
+        return 0.0f;
+    }
+
+    __int64 counter = 0;
+    QueryPerformanceCounter((LARGE_INTEGER*)&counter);
+    return (float) ((counter - start) / double(frequency));
+}
+
+
+struct State
+{
+	float x;
+	float v;
+};
+
+struct Derivative
+{
+	float dx;
+	float dv;
+};
+
+State interpolate(const State &previous, const State &current, float alpha)
+{
+	State state;
+	state.x = current.x*alpha + previous.x*(1-alpha);
+	state.v = current.v*alpha + previous.v*(1-alpha);
+	return state;
+}
+
+float acceleration(const State &state, float t)
+{
+	const float k = 10;
+	const float b = 1;
+	return - k*state.x - b*state.v;
+}
+
+Derivative evaluate(const State &initial, float t)
+{
+	Derivative output;
+	output.dx = initial.v;
+	output.dv = acceleration(initial, t);
+	return output;
+}
+
+Derivative evaluate(const State &initial, float t, float dt, const Derivative &d)
+{
+	State state;
+	state.x = initial.x + d.dx*dt;
+	state.v = initial.v + d.dv*dt;
+	Derivative output;
+	output.dx = state.v;
+	output.dv = acceleration(state, t+dt);
+	return output;
+}
+
+void integrate(State &state, float t, float dt)
+{
+	Derivative a = evaluate(state, t);
+	Derivative b = evaluate(state, t, dt*0.5f, a);
+	Derivative c = evaluate(state, t, dt*0.5f, b);
+	Derivative d = evaluate(state, t, dt, c);
+	
+	const float dxdt = 1.0f/6.0f * (a.dx + 2.0f*(b.dx + c.dx) + d.dx);
+	const float dvdt = 1.0f/6.0f * (a.dv + 2.0f*(b.dv + c.dv) + d.dv);
+	
+	state.x = state.x + dxdt*dt;
+	state.v = state.v + dvdt*dt;
+}
 
 int main(int argc, char **argv) {
 	srand(static_cast<unsigned int>(time(nullptr))); //seed random number generator with the current time
@@ -35,21 +116,81 @@ int main(int argc, char **argv) {
 	if (window == nullptr) {
 		logSDLError("CreateWindow");
 	}
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	//SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (renderer == nullptr) {
 		logSDLError("CreateRenderer");
 	}
 
-	World *world = new World(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	FpsTracker fpsTracker(100);
 
 	Hud *hud = new Hud(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	hud->setTextColor(255, 0, 0);
+	hud->drawTextBlended(0, 0, "Pong - nuff said.");
 
-	world->startRound();
+	WorldState currentWorldState;
+	World *world = new World(renderer, SCREEN_WIDTH, SCREEN_HEIGHT, currentWorldState);
+	world->startRound(currentWorldState);
+	WorldState previousWorldState=currentWorldState;
+
+	State current;
+	current.x = 100;
+	current.v = 0;
+	
+	State previous = current;
+
+	float t = 0.0f;
+	float dt = PHYSICS_TIMESTEP;
+
+	float currentTime = time();
+	float accumulator = 0;
 
 	bool quit = false;
 	SDL_Event event;
 	while (!quit) {
-		//Read user input & handle it
+		const float newTime = time();
+		float deltaTime = newTime - currentTime; //aka time for this frame
+		currentTime = newTime;
+
+		if (deltaTime > 0.25f) {
+			std::cout << "limiting delta time to 0.25f" << std::endl;
+			deltaTime = 0.25f; // anti "spiral of death" / breakpoints
+		}
+
+		accumulator += deltaTime;
+
+		int simCount = 0;
+		while (accumulator >= dt) {
+			accumulator -= dt;
+			previous = current;
+			integrate(current, t, dt);
+			previousWorldState = currentWorldState;
+			world->update(currentWorldState, dt); //aka integrate
+			t += dt;
+			++simCount;
+		}
+		if (simCount > 1) {
+			std::cout << "Simulated multiple steps:" << simCount << std::endl;
+		}
+
+		State state = interpolate(previous, current, accumulator/dt);
+		WorldState lerped = WorldState::lerpBetween(previousWorldState, currentWorldState, accumulator/dt);
+
+		std::stringstream fps;
+		fps << "FPS: " << static_cast<int>(1 / fpsTracker.calculateAverageFrameTime(deltaTime));
+		std::string s = fps.str();
+		hud->drawTextFast(0, 300, s.c_str());
+
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+		SDL_RenderClear(renderer);
+		world->render(lerped);
+		SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
+		SDL_RenderDrawLine(renderer, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
+			static_cast<int>(SCREEN_WIDTH / 2 + state.x * 3), SCREEN_HEIGHT / 2);
+		hud->render();
+		SDL_RenderPresent(renderer);
+
+		//TODO figure out where user input handling should go. @see http://gamedev.stackexchange.com/questions/8623/a-good-way-to-build-a-game-loop-in-opengl
 		while (SDL_PollEvent(&event)) {
 			switch(event.type) {
 			case SDL_QUIT:
@@ -64,16 +205,6 @@ int main(int argc, char **argv) {
 				break;
 			}
 		}
-
-		world->update();
-
-		SDL_RenderClear(renderer);
-
-		world->render();
-		
-		hud->render();
-
-		SDL_RenderPresent(renderer);
 	}
 
 	std::cout << "Quitting" << std::endl;
