@@ -54,11 +54,32 @@ void Hud::setTextColor(uint8_t r, uint8_t g, uint8_t b) {
 	this->color = newColor;
 }
 
+// returns a rect with x and y components based on provided x and y but adjusted for the given
+// alignments using the width and height of the provided surface
+SDL_Rect calculatePosition(SDL_Surface *surface, int x, int y, AlignH alignH, AlignV alignV) {
+	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
+	if (alignH == AlignH::Center) {
+		position.x -= surface->w / 2;
+	} else if (alignH == AlignH::Right) {
+		position.x -= surface->w;
+	}
+	if (alignV == AlignV::Center) {
+		position.y -= surface->h / 2;
+	} else if (alignV == AlignV::Bottom) {
+		position.y -= surface->h;
+	}
+	return position;
+}
+
 void Hud::drawTextFast(int x, int y, const char *text) {
 	drawTextFast(x, y, text, AlignH::Left);
 }
 
-void Hud::drawTextFast(int x, int y, const char *text, AlignH align) {
+void Hud::drawTextFast(int x, int y, const char *text, AlignH alignH) {
+	drawTextFast(x, y, text, alignH, AlignV::Top);
+}
+
+void Hud::drawTextFast(int x, int y, const char *text, AlignH alignH, AlignV alignV) {
 	SDL_Surface *textSurface = TTF_RenderText_Solid(font, text, this->color);
 	if (textSurface == nullptr) {
 		logSDLError("TTF_RenderText_Blended");
@@ -67,13 +88,8 @@ void Hud::drawTextFast(int x, int y, const char *text, AlignH align) {
 	if (!this->fastSurfaceDirty) {
 		SDL_FillRect(this->fastSurface, nullptr, 0);
 	}
-
-	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
-	if (align == AlignH::Center) {
-		position.x -= textSurface->w / 2;
-	} else if (align == AlignH::Right) {
-		position.x -= textSurface->w;
-	}
+	
+	SDL_Rect position = calculatePosition(textSurface, x, y, alignH, alignV);
 	if (SDL_BlitSurface(textSurface, nullptr, this->fastSurface, &position) != 0) {
 		logSDLError("BlitSurface");
 	}
@@ -82,11 +98,15 @@ void Hud::drawTextFast(int x, int y, const char *text, AlignH align) {
 	this->fastSurfaceDirty = true;
 }
 
-void Hud::drawTextBlended(int x, int y, char *text) {
+void Hud::drawTextBlended(int x, int y, const char *text) {
 	drawTextBlended(x, y, text, AlignH::Left);
 }
 
-void Hud::drawTextBlended(int x, int y, char *text, AlignH align) {
+void Hud::drawTextBlended(int x, int y, const char *text, AlignH alignH) {
+	drawTextBlended(x, y, text, alignH, AlignV::Top);
+}
+
+void Hud::drawTextBlended(int x, int y, const char *text, AlignH alignH, AlignV alignV) {
 	SDL_Surface *textSurface = TTF_RenderText_Blended(font, text, this->color);
 	if (textSurface == nullptr) {
 		logSDLError("TTF_RenderText_Blended");
@@ -100,12 +120,7 @@ void Hud::drawTextBlended(int x, int y, char *text, AlignH align) {
 		SDL_FillRect(this->slowSurface, nullptr, 0);
 	}
 
-	SDL_Rect position = { x, y, 0, 0 }; // w & h are ignored when doing non-scaled blitting
-	if (align == AlignH::Center) {
-		position.x -= textSurface->w / 2;
-	} else if (align == AlignH::Right) {
-		position.x -= textSurface->w;
-	}
+	SDL_Rect position = calculatePosition(textSurface, x, y, alignH, alignV);
 	if (SDL_BlitSurface(textSurface, nullptr, this->slowSurface, &position) != 0) {
 		logSDLError("BlitSurface");
 	}
