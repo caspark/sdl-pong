@@ -1,7 +1,5 @@
 #include <string>
 #include <iostream>
-#include <time.h>
-#include <exception>
 
 #include <SDL.h>
 #include <SDL_image.h>
