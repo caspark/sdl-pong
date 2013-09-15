@@ -16,66 +16,6 @@
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 
-struct State
-{
-	float x;
-	float v;
-};
-
-struct Derivative
-{
-	float dx;
-	float dv;
-};
-
-State interpolate(const State &previous, const State &current, float alpha)
-{
-	State state;
-	state.x = current.x*alpha + previous.x*(1-alpha);
-	state.v = current.v*alpha + previous.v*(1-alpha);
-	return state;
-}
-
-float acceleration(const State &state, float t)
-{
-	const float k = 10;
-	const float b = 1;
-	return - k*state.x - b*state.v;
-}
-
-Derivative evaluate(const State &initial, float t)
-{
-	Derivative output;
-	output.dx = initial.v;
-	output.dv = acceleration(initial, t);
-	return output;
-}
-
-Derivative evaluate(const State &initial, float t, float dt, const Derivative &d)
-{
-	State state;
-	state.x = initial.x + d.dx*dt;
-	state.v = initial.v + d.dv*dt;
-	Derivative output;
-	output.dx = state.v;
-	output.dv = acceleration(state, t+dt);
-	return output;
-}
-
-void integrate(State &state, float t, float dt)
-{
-	Derivative a = evaluate(state, t);
-	Derivative b = evaluate(state, t, dt*0.5f, a);
-	Derivative c = evaluate(state, t, dt*0.5f, b);
-	Derivative d = evaluate(state, t, dt, c);
-	
-	const float dxdt = 1.0f/6.0f * (a.dx + 2.0f*(b.dx + c.dx) + d.dx);
-	const float dvdt = 1.0f/6.0f * (a.dv + 2.0f*(b.dv + c.dv) + d.dv);
-	
-	state.x = state.x + dxdt*dt;
-	state.v = state.v + dvdt*dt;
-}
-
 void drawUI(Hud *hud, WorldState &state) {
 	hud->setTextColor(255, 0, 0);
 	hud->drawTextBlended(SCREEN_WIDTH / 2, 0, "It's a Pong!", AlignH::Center);
@@ -129,12 +69,6 @@ int main(int argc, char **argv) {
 	Hud *hud = new Hud(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 	drawUI(hud, currentWorldState);
 
-	State current;
-	current.x = 100;
-	current.v = 0;
-	
-	State previous = current;
-
 	float t = 0.0f;
 	float dt = PHYSICS_TIMESTEP;
 
@@ -158,8 +92,6 @@ int main(int argc, char **argv) {
 		int simCount = 0;
 		while (accumulator >= dt) {
 			accumulator -= dt;
-			previous = current;
-			integrate(current, t, dt);
 			previousWorldState = currentWorldState;
 			world->update(currentWorldState, dt); //aka integrate
 			if (currentWorldState.humanScore != previousWorldState.humanScore
@@ -173,7 +105,6 @@ int main(int argc, char **argv) {
 			std::cout << "Simulated multiple steps:" << simCount << std::endl;
 		}
 
-		State state = interpolate(previous, current, accumulator/dt);
 		WorldState lerped = WorldState::lerpBetween(previousWorldState, currentWorldState, accumulator/dt);
 
 		drawFps(hud, static_cast<int>(1 / fpsTracker.calculateAverageFrameTime(deltaTime)));
@@ -181,9 +112,6 @@ int main(int argc, char **argv) {
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);
 		world->render(lerped);
-		SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
-		SDL_RenderDrawLine(renderer, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
-			static_cast<int>(SCREEN_WIDTH / 2 + state.x * 3), SCREEN_HEIGHT / 2);
 		hud->render();
 		SDL_RenderPresent(renderer);
 
