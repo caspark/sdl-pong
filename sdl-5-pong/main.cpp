@@ -96,6 +96,16 @@ void integrate(State &state, float t, float dt)
 	state.v = state.v + dvdt*dt;
 }
 
+void drawUI(Hud *hud, WorldState &state) {
+	hud->setTextColor(255, 0, 0);
+	hud->drawTextBlended(SCREEN_WIDTH / 2, 0, "It's a Pong!", AlignH::Center);
+
+	hud->setTextColor(0, 0, 255);
+	hud->drawTextBlended(0, SCREEN_HEIGHT, std::to_string(state.humanScore).c_str(),
+		AlignH::Left, AlignV::Bottom);
+	hud->drawTextBlended(SCREEN_WIDTH, SCREEN_HEIGHT, std::to_string(state.opponentScore).c_str(), AlignH::Right, AlignV::Bottom);
+}
+
 int main(int argc, char **argv) {
 	srand(static_cast<unsigned int>(time(nullptr))); //seed random number generator with the current time
 
@@ -124,14 +134,13 @@ int main(int argc, char **argv) {
 
 	FpsTracker fpsTracker(100);
 
-	Hud *hud = new Hud(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-	hud->setTextColor(255, 0, 0);
-	hud->drawTextBlended(SCREEN_WIDTH / 2, 0, "It's a Pong!", AlignH::Center);
-
 	WorldState currentWorldState;
 	World *world = new World(renderer, SCREEN_WIDTH, SCREEN_HEIGHT, currentWorldState);
 	world->startRound(currentWorldState);
 	WorldState previousWorldState=currentWorldState;
+
+	Hud *hud = new Hud(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+	drawUI(hud, currentWorldState);
 
 	State current;
 	current.x = 100;
@@ -166,6 +175,10 @@ int main(int argc, char **argv) {
 			integrate(current, t, dt);
 			previousWorldState = currentWorldState;
 			world->update(currentWorldState, dt); //aka integrate
+			if (currentWorldState.humanScore != previousWorldState.humanScore
+				|| currentWorldState.opponentScore != previousWorldState.opponentScore) {
+					drawUI(hud, currentWorldState);
+			}
 			t += dt;
 			++simCount;
 		}
@@ -175,6 +188,7 @@ int main(int argc, char **argv) {
 
 		State state = interpolate(previous, current, accumulator/dt);
 		WorldState lerped = WorldState::lerpBetween(previousWorldState, currentWorldState, accumulator/dt);
+
 
 		std::stringstream fps;
 		fps << "FPS: " << static_cast<int>(1 / fpsTracker.calculateAverageFrameTime(deltaTime));
