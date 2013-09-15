@@ -106,6 +106,13 @@ void drawUI(Hud *hud, WorldState &state) {
 	hud->drawTextBlended(SCREEN_WIDTH, SCREEN_HEIGHT, std::to_string(state.opponentScore).c_str(), AlignH::Right, AlignV::Bottom);
 }
 
+void drawFps(Hud *hud, int fps) {
+	hud->setTextColor(255, 176, 0);
+	std::stringstream ss;
+	ss << "FPS: " << fps;
+	hud->drawTextFast(SCREEN_WIDTH, 0, ss.str().c_str(), AlignH::Right);
+}
+
 int main(int argc, char **argv) {
 	srand(static_cast<unsigned int>(time(nullptr))); //seed random number generator with the current time
 
@@ -189,11 +196,7 @@ int main(int argc, char **argv) {
 		State state = interpolate(previous, current, accumulator/dt);
 		WorldState lerped = WorldState::lerpBetween(previousWorldState, currentWorldState, accumulator/dt);
 
-
-		std::stringstream fps;
-		fps << "FPS: " << static_cast<int>(1 / fpsTracker.calculateAverageFrameTime(deltaTime));
-		std::string s = fps.str();
-		hud->drawTextFast(SCREEN_WIDTH, 0, s.c_str(), AlignH::Right);
+		drawFps(hud, static_cast<int>(1 / fpsTracker.calculateAverageFrameTime(deltaTime)));
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);
