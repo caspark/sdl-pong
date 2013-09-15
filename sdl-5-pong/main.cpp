@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
 
 	Hud *hud = new Hud(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 	hud->setTextColor(255, 0, 0);
-	hud->drawTextBlended(0, 0, "Pong - nuff said.");
+	hud->drawTextBlended(SCREEN_WIDTH / 2, 0, "It's a Pong!", AlignH::Center);
 
 	WorldState currentWorldState;
 	World *world = new World(renderer, SCREEN_WIDTH, SCREEN_HEIGHT, currentWorldState);
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
 		std::stringstream fps;
 		fps << "FPS: " << static_cast<int>(1 / fpsTracker.calculateAverageFrameTime(deltaTime));
 		std::string s = fps.str();
-		hud->drawTextFast(0, 300, s.c_str());
+		hud->drawTextFast(SCREEN_WIDTH, 0, s.c_str(), AlignH::Right);
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);
