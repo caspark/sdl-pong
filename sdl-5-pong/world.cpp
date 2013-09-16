@@ -9,6 +9,8 @@
 #include "entities.h"
 #include "util.h"
 
+//#define AI_PLAYS_FOR_HUMAN
+
 const float PLAYER_SPEED = 7 / PHYSICS_TIMESTEP;
 const float INITIAL_BALL_X_SPEED = 5 / PHYSICS_TIMESTEP;
 const int INITIAL_BALL_Y_SPEED_MIN = static_cast<int>(2 / PHYSICS_TIMESTEP);
@@ -53,6 +55,10 @@ void World::startRound(WorldState &state) {
 	state.opponent.pos.x = width - state.opponent.size.x;
 	state.opponent.pos.y = height / 2 - state.opponent.size.y / 2;
 
+	std::cout << "size = " << width << "," << height << std::endl;
+	std::cout << "Opponent size = " << state.opponent.size.x << "," << state.opponent.size.y << std::endl;
+	std::cout << "Opponent pos = " << state.opponent.pos.x << "," << state.opponent.pos.y << std::endl;
+
 	state.ball.pos.x = width / 2 - state.ball.size.x / 2;
 	state.ball.pos.y = height / 2 - state.ball.size.y / 2;
 	state.ball.speed.x = INITIAL_BALL_X_SPEED;
@@ -62,6 +68,16 @@ void World::startRound(WorldState &state) {
 }
 
 void World::update(WorldState &state, float timeDelta) {
+#ifdef AI_PLAYS_FOR_HUMAN
+	float aiIdealDistanceToCoverHuman = state.ball.getCenter().y - state.human.getCenter().y;
+	if (aiIdealDistanceToCoverHuman > PLAYER_SPEED * timeDelta) {
+		state.human.speed.y = PLAYER_SPEED;
+	} else if (aiIdealDistanceToCoverHuman < -PLAYER_SPEED * timeDelta) {
+		state.human.speed.y = -PLAYER_SPEED;
+	} else {
+		state.human.speed.y = 0;
+	}
+#else
 	//handle non-event-based input
 	const Uint8 *keysDown = SDL_GetKeyboardState(nullptr);
 	if (keysDown[SDL_SCANCODE_UP]) {
@@ -71,6 +87,7 @@ void World::update(WorldState &state, float timeDelta) {
 	} else {
 		state.human.speed.y = 0;
 	}
+#endif
 
 	//"ai" for opponent player
 	float aiIdealDistanceToCover = state.ball.getCenter().y - state.opponent.getCenter().y;
