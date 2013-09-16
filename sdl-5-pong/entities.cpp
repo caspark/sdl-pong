@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "entities.h"
 #include "util.h"
 
@@ -35,9 +37,14 @@ Vector2 MovingRect::getCenter() {
 Player::Player(SDL_Renderer *renderer, MovingRect &state) {
 	this->renderer = renderer;
 	this->tex = loadTexture("paddle.png", renderer);
-	SDL_assert(this->tex != nullptr);
+	if (this->tex == nullptr) {
+		logFatal("loadTexture");
+	}
 	int w, h;
-	SDL_assert(SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) == 0);
+	if (SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) != 0) {
+		logFatal("QueryTexture");
+	}
+	std::cout << "texture size = " << w << "," << h << std::endl;
 	state.size.x = static_cast<float>(w);
 	state.size.y = static_cast<float>(h);
 	state.speed.x = 0;
@@ -56,9 +63,13 @@ void Player::render(MovingRect &state) {
 Ball::Ball(SDL_Renderer *renderer, MovingRect &state) {
 	this->renderer = renderer;
 	this->tex = loadTexture("ball.png", renderer);
-	SDL_assert(this->tex != nullptr);
+	if (this->tex == nullptr) {
+		logFatal("loadTexture");
+	}
 	int w, h;
-	SDL_assert(SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) == 0);
+	if (SDL_QueryTexture(this->tex, nullptr, nullptr, &w, &h) != 0) {
+		logFatal("QueryTexture");
+	}
 	state.size.x = static_cast<float>(w);
 	state.size.y = static_cast<float>(h);
 }
